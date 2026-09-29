@@ -45,11 +45,40 @@ enum AppResetter {
                 defaults.synchronize()
                 return
             }
-        } else {
             // First run in /Applications - record bundle signature
             defaults.set(inode, forKey: inodeKey)
             defaults.set(currentBirthtime, forKey: birthtimeKey)
             defaults.synchronize()
+        }
+    }
+
+    private static var monitorTimer: Timer?
+
+    /// Monitors whether the application bundle has been deleted from /Applications or moved to Trash while running.
+    /// If the user deletes or trashes Glance, it immediately purges all user data and terminates.
+    static func startBundleLifecycleMonitor() {
+        let bundlePath = Bundle.main.bundlePath
+        // Only monitor if running from /Applications
+        guard bundlePath.hasPrefix("/Applications/") || bundlePath == "/Applications/Glance.app" else {
+            return
+        }
+
+        monitorTimer?.invalidate()
+        monitorTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            Task { @MainActor in
+                let fm = FileManager.default
+                let bundleURL = Bundle.main.bundleURL
+                let isInsideTrash = bundleURL.path.contains("/.Trash/") || bundleURL.path.contains("/Trash/")
+                let stillExistsInApplications = fm.fileExists(atPath: "/Applications/Glance.app")
+
+                if isInsideTrash || !stillExistsInApplications {
+                    print("Glance: Bundle was moved to Trash or deleted from /Applications. Purging all user data...")
+                    monitorTimer?.invalidate()
+                    monitorTimer = nil
+                    resetAllUserData(keepApplicationFile: false)
+                    NSApp.terminate(nil)
+                }
+            }
         }
     }
 

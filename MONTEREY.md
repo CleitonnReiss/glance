@@ -195,6 +195,8 @@ Todas as classes de estado e modelos reativos foram convertidos para a conformid
      - Menu da Barra Superior: Adicionados os itens **"Reset & Reconfigure..."** e **"Uninstall Glance Completely..."**.
      - Tela Sobre (Settings > About): Adicionados botões de ação dedicados para Redefinir Configuração e Desinstalar.
      - Ao clicar em "Uninstall", o app apaga todas as chaves e dados biométricos e move o próprio executável para a Lixeira, mantendo a pasta do instalador limpa sem scripts adicionais.
+   4. **Auto-Limpeza em Tempo Real ao Mover para a Lixeira (`startBundleLifecycleMonitor`)**:
+      - O Glance monitora o ciclo de vida do seu próprio bundle. Caso o usuário arraste o `Glance.app` para a Lixeira (`~/.Trash`) ou o delete de `/Applications`, o monitor detecta a remoção imediatamente e purga todos os dados biométricos, chaves do Chaveiro, LaunchAgent e preferências, encerrando a execução e deixando o macOS 100% limpo sem arquivos órfãos.
 
 ---
 

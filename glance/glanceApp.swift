@@ -123,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Verify installation integrity: if the app was reinstalled or replaced on disk,
         // automatically reset stale state so it begins cleanly with onboarding.
         AppResetter.verifyInstallationIntegrity()
+        AppResetter.startBundleLifecycleMonitor()
 
         // Deferred until onboarding is done — Sparkle's own "Check for updates automatically?" consent alert fires the moment
         // it starts on a fresh install, and starting unconditionally here used to pop it mid-onboarding.

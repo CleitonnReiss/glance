@@ -45,9 +45,10 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 - Corrigida a invisibilidade do ícone na barra superior: o macOS 12 não carregava arquivos `.svg` avulsos pelo AppKit.
 - Criado gerador de PNGs de alta resolução (`@1x` e `@2x`) e um desenhista vetorial nativo via CoreGraphics com `isTemplate = true`, garantindo que o logo apareça nítido em telas normais e Retina, com suporte dinâmico aos modos Claro e Escuro.
 
-### 6. 🧹 Desinstalação Completa e Detecção Automática de Reinstalação Limpa
-- **Desinstalação Sem Rastros 100% Integrada**: Adicionada a opção **"Uninstall Glance Completely..."** no menu da barra superior e na aba Sobre das preferências. Remove com um clique todos os dados biométricos, senhas do Chaveiro, configurações salvas, LaunchAgent e move o app para a Lixeira, sem precisar de scripts externos.
-- **Detecção de Reinstalação de Fábrica**: O app monitora o identificador do bundle no disco. Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
+### 6. 🧹 Desinstalação Sem Rastros e Auto-Limpeza ao Mover para a Lixeira
+- **Auto-Limpeza Imediata ao Mover para a Lixeira**: O Glance monitora o ciclo de vida do seu próprio bundle no disco. Caso você arraste o `Glance.app` para a Lixeira (`~/.Trash`) ou o delete da pasta Aplicativos, ele detecta a remoção em tempo real e purga imediatamente todos os arquivos faciais em Application Support, credenciais do Chaveiro, LaunchAgent e preferências do UserDefaults, deixando o macOS 100% limpo sem arquivos órfãos.
+- **Desinstalação 100% Integrada**: Adicionada também a opção **"Uninstall Glance Completely..."** no menu da barra superior e na aba Sobre das preferências. Remove com um clique todos os dados biométricos e move o app para a Lixeira.
+- **Detecção de Reinstalação de Fábrica**: Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
 - **Instalador DMG Limpo e Seguro**: A imagem de disco contém estritamente o `Glance.app` e o atalho para a pasta `Applications`.
 
 ### 7. 🛡️ Estabilidade no Onboarding e Persistência Imediata de Dados
