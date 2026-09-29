@@ -9,7 +9,7 @@
 import SwiftUI
 
 enum SettingsMetrics {
-    static let windowSize = CGSize(width: 500, height: 620)
+    static let windowSize = CGSize(width: 520, height: 620)
     /// No `outerCornerRadius` token — the window's outer corner is AppKit's
     /// own native mask (see WindowConfiguringView), not a hardcoded clip.
     ///
@@ -112,7 +112,7 @@ enum SettingsMetrics {
     /// line from stretching toward the trailing control/tiles, and keeps
     /// every subtitle (plain rows and `SettingsLabeledOptionRow` alike)
     /// wrapping at the same width.
-    static let rowSubtitleMaxWidth: CGFloat = 260
+    static let rowSubtitleMaxWidth: CGFloat = 280
     /// Two-line slider rows size to their content instead of `rowHeight`;
     /// this keeps their total height visually in step with single-line rows
     /// in the same group.

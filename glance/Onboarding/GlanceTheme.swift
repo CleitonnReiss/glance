@@ -37,14 +37,14 @@ enum GlanceTheme {
     static let statusDenied = Color(red: 0xFF / 255, green: 0x45 / 255, blue: 0x3A / 255)
 
     enum Font {
-        /// Scaled up so content reads clearly at the wider `OnboardingMetrics.panelWidth`.
-        static let title = SwiftUI.Font.system(size: 26, weight: .bold)
+        /// Proportioned so localized text (PT, ES, EN) fits gracefully without line collisions.
+        static let title = SwiftUI.Font.system(size: 21, weight: .bold)
         static let button = SwiftUI.Font.system(size: 13, weight: .medium)
         static let rowTitle = SwiftUI.Font.system(size: 13, weight: .medium)
         static let grantLabel = SwiftUI.Font.system(size: 12, weight: .semibold)
         static let rowDetail = SwiftUI.Font.system(size: 11, weight: .regular)
-        static let passwordCaption = SwiftUI.Font.system(size: 12, weight: .medium)
+        static let passwordCaption = SwiftUI.Font.system(size: 11.5, weight: .regular)
         static let passwordPlaceholder = SwiftUI.Font.system(size: 12, weight: .regular)
-        static let instruction = SwiftUI.Font.system(size: 15, weight: .medium)
+        static let instruction = SwiftUI.Font.system(size: 13.5, weight: .medium)
     }
 }

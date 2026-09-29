@@ -11,11 +11,47 @@ import AppKit
 
 // MARK: - 1. Intro
 
-struct IntroStepView: View {
-    let controller: OnboardingController
+/// Globe button in the initial screen to switch language before starting configuration.
+struct LanguageGlobeButton: View {
+    @ObservedObject private var settings = GlanceSettings.shared
 
     var body: some View {
-        let lang = GlanceSettings.shared.appLanguage
+        Menu {
+            ForEach(AppLanguage.allCases) { lang in
+                Button(action: {
+                    settings.appLanguage = lang
+                }) {
+                    if settings.appLanguage == lang {
+                        Label(lang.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(lang.displayName)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "globe")
+                    .font(.system(size: 14, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(GlanceTheme.textPrimary)
+            .frame(width: 48, height: OnboardingMetrics.pillButtonHeight)
+            .background(GlanceTheme.surface)
+            .clipShape(Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Language / Idioma")
+    }
+}
+
+struct IntroStepView: View {
+    let controller: OnboardingController
+    @ObservedObject private var settings = GlanceSettings.shared
+
+    var body: some View {
+        let lang = settings.appLanguage
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.string(.introTitle, lang: lang))
@@ -24,11 +60,16 @@ struct IntroStepView: View {
                 Text(L10n.string(.introSubtitle, lang: lang))
                     .font(GlanceTheme.Font.button)
                     .foregroundStyle(GlanceTheme.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
 
                 Spacer(minLength: 12)
 
-                PillButton(title: L10n.string(.next, lang: lang)) {
-                    controller.advance()
+                HStack(spacing: 8) {
+                    PillButton(title: L10n.string(.next, lang: lang)) {
+                        controller.advance()
+                    }
+                    LanguageGlobeButton()
                 }
             }
             .padding(.leading, 4)
@@ -102,25 +143,29 @@ struct SecurityNoticeStepView: View {
     let controller: OnboardingController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "exclamationmark.circle.fill")
-                .font(.system(size: 40, weight: .semibold))
+                .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(GlanceTheme.textPrimary)
-                .padding(.top, 25)
+                .padding(.top, 4)
                 .padding(.leading, 4)
 
             Text(L10n.string(.secNoticeTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(3)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Text(L10n.string(.secNoticeDetail))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
-                .padding(.bottom, 10)
+                .padding(.bottom, 6)
 
             HStack(spacing: 10) {
                 if controller.isPostUpdateNotice {
@@ -152,18 +197,20 @@ struct PreSetupStepView: View {
     var body: some View {
         VStack(spacing: 2) {
             HStack(alignment: .top, spacing: 2) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.string(.preSetupTitle))
                         .font(GlanceTheme.Font.title)
                         .foregroundStyle(GlanceTheme.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .minimumScaleFactor(0.85)
 
                     Text(L10n.string(.preSetupDetail))
                         .font(GlanceTheme.Font.button)
                         .foregroundStyle(GlanceTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .minimumScaleFactor(0.85)
                 }
-                .padding(.top, 10)
+                .padding(.top, 6)
                 .padding(.leading, 4)
                 Spacer(minLength: 0)
                 UnlockGlyphView()
@@ -203,12 +250,13 @@ struct SelectCameraStepView: View {
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .padding(.leading, 4)
-                .padding(.top, 14)
+                .padding(.top, 4)
 
             Text(L10n.string(.selectCameraSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Spacer(minLength: 2)
@@ -383,12 +431,16 @@ struct NameStepView: View {
             Text(L10n.string(.nameStepTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Text(L10n.string(.nameStepSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(3)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Spacer(minLength: 2)
@@ -431,12 +483,16 @@ struct PasswordStepView: View {
             Text(L10n.string(.passwordStepTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Text(L10n.string(.passwordStepSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
+                .minimumScaleFactor(0.85)
                 .padding(.leading, 4)
 
             Spacer(minLength: 2)

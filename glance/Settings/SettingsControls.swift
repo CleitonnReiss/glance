@@ -671,6 +671,9 @@ struct SettingsOptionTile<Preview: View>: View {
 
                 Text(title)
                     .font(SettingsMetrics.optionLabelFont)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
                     .foregroundStyle(isSelected ? SettingsMetrics.textPrimary : SettingsMetrics.textSecondary)
             }
             .frame(maxWidth: previewWidth == nil ? .infinity : nil)

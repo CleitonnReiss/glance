@@ -16,7 +16,7 @@ struct PillButton: View {
 
     let title: String
     var style: Style = .primary
-    var width: CGFloat = OnboardingMetrics.primaryButtonWidth
+    var width: CGFloat? = nil
     var isEnabled = true
     /// Return/Enter activates this button when a focused text field doesn't
     /// consume it — same as a Mac dialog's default button.
@@ -27,8 +27,13 @@ struct PillButton: View {
         let button = Button(action: action) {
             Text(title)
                 .font(GlanceTheme.Font.button)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .foregroundStyle(GlanceTheme.textPrimary)
-                .frame(width: width, height: OnboardingMetrics.pillButtonHeight)
+                .padding(.horizontal, 14)
+                .frame(width: width)
+                .frame(maxWidth: width == nil ? .infinity : nil)
+                .frame(height: OnboardingMetrics.pillButtonHeight)
                 .background(background)
                 .clipShape(Capsule())
         }
@@ -76,8 +81,10 @@ struct PermissionRow: View {
             Spacer(minLength: 4)
 
             Button(action: grant) {
-                Text(granted ? L10n.string(.granted, lang: GlanceSettings.shared.appLanguage) : L10n.string(.grant, lang: GlanceSettings.shared.appLanguage))
+                Text(granted ? L10n.string(.granted) : L10n.string(.grant))
                     .font(GlanceTheme.Font.grantLabel)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .foregroundStyle(GlanceTheme.textPrimary)
                     .frame(width: OnboardingMetrics.grantButtonSize.width, height: OnboardingMetrics.grantButtonSize.height)
                     .background(GlanceTheme.surfaceRaised)
@@ -109,7 +116,7 @@ struct CameraSelectionPill: View {
     var body: some View {
         HStack {
             Menu {
-                Button(L10n.string(.systemDefaultCamera, lang: GlanceSettings.shared.appLanguage)) { onSelect(nil) }
+                Button(L10n.string(.systemDefaultCamera)) { onSelect(nil) }
                 ForEach(devices) { device in
                     Button(device.name) { onSelect(device.id) }
                 }
@@ -127,9 +134,9 @@ struct CameraSelectionPill: View {
             .buttonStyle(.plain)
             // Window-level accent tint otherwise paints the menu label blue.
             .tint(GlanceTheme.textPrimary)
-            .frame(width: 220, height: 30)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
 
             // Decorative only — the menu above is the actual tap target.
             Image(systemName: "chevron.up.chevron.down")

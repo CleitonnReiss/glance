@@ -68,6 +68,14 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
   - Caixas de diálogo de confirmação (redefinição de fábrica e desinstalação completa).
 - **Detecção Inteligente do Sistema**: O aplicativo seleciona automaticamente o Português do Brasil para usuários com macOS em português ou caso nenhuma preferência tenha sido definida.
 
+### 10. 🌍 Seletor de Idioma (Globo) na Tela Inicial e Layout Responsivo Aprimorado
+- **Botão de Globo na Primeira Tela de Boas-vindas**: Adicionado botão de globo com menu dropdown elegante ao lado do botão de iniciar/avançar no Onboarding, permitindo escolher o idioma desejado (Português, Inglês ou Espanhol) antes mesmo de iniciar a configuração.
+- **Ajuste Proporcional do Layout para Textos Traduzidos**:
+  - Ampliada a largura do painel (`panelWidth` de 380 para 400px) e altura de cada etapa, eliminando cortes em textos mais longos característicos do Português e Espanhol.
+  - Tipografia ajustada (`title` 21pt, legendas 11.5pt) com suporte a escalonamento adaptativo (`minimumScaleFactor` de 0.75 a 0.85).
+  - Botões com largura flexível e auto-ajuste de espaçamento, impedindo que textos como "Não, obrigado", "Entendi" ou "Concedido" quebrem ou fiquem espremidos.
+  - Janela de configurações ampliada para 520px com limites de largura de legendas expandidos para 280px.
+
 ---
 
 ## 🛠️ Instruções de Instalação e Permissões

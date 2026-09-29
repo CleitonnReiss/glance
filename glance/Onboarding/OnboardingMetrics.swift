@@ -21,28 +21,28 @@ enum OnboardingMetrics {
     // `panelWidth` is shared by every step except `.enroll`; widths are not split per
     // style, but height is fully independent per step and per style.
 
-    /// Width used by every step except `.enroll`.
-    static let panelWidth: CGFloat = 380
+    /// Width used by every step except `.enroll` — expanded to comfortably accommodate multi-language content.
+    static let panelWidth: CGFloat = 400
 
     /// The camera/enrollment step's width — deliberately independent of `panelWidth`.
-    static let enrollPanelWidth: CGFloat = 320
+    static let enrollPanelWidth: CGFloat = 330
 
-    static let notchIntroHeight: CGFloat = 175
-    static let pillIntroHeight: CGFloat = 175
-    static let notchPermissionsHeight: CGFloat = 245
-    static let pillPermissionsHeight: CGFloat = 245
-    static let notchSecurityNoticeHeight: CGFloat = 260
-    static let pillSecurityNoticeHeight: CGFloat = 260
-    static let notchPreSetupHeight: CGFloat = 220
-    static let pillPreSetupHeight: CGFloat = 220
-    static let notchSelectCameraHeight: CGFloat = 228
-    static let pillSelectCameraHeight: CGFloat = 228
+    static let notchIntroHeight: CGFloat = 180
+    static let pillIntroHeight: CGFloat = 180
+    static let notchPermissionsHeight: CGFloat = 265
+    static let pillPermissionsHeight: CGFloat = 260
+    static let notchSecurityNoticeHeight: CGFloat = 295
+    static let pillSecurityNoticeHeight: CGFloat = 285
+    static let notchPreSetupHeight: CGFloat = 235
+    static let pillPreSetupHeight: CGFloat = 235
+    static let notchSelectCameraHeight: CGFloat = 245
+    static let pillSelectCameraHeight: CGFloat = 245
     static let notchEnrollHeight: CGFloat = 344
     static let pillEnrollHeight: CGFloat = 350
-    static let notchNameHeight: CGFloat = 230
-    static let pillNameHeight: CGFloat = 230
-    static let notchPasswordHeight: CGFloat = 260
-    static let pillPasswordHeight: CGFloat = 260
+    static let notchNameHeight: CGFloat = 245
+    static let pillNameHeight: CGFloat = 245
+    static let notchPasswordHeight: CGFloat = 290
+    static let pillPasswordHeight: CGFloat = 285
     static let notchCompleteHeight: CGFloat = 95
     static let pillCompleteHeight: CGFloat = 95
 
@@ -146,7 +146,7 @@ enum OnboardingMetrics {
     static let primaryButtonWidth: CGFloat = 160
 
     static let permissionRowHeight: CGFloat = 44
-    static let grantButtonSize = CGSize(width: 60, height: 26)
+    static let grantButtonSize = CGSize(width: 72, height: 26)
     static let statusDotSize: CGFloat = 16
 
     // MARK: - Camera / tick ring
