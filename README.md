@@ -47,18 +47,30 @@ https://github.com/user-attachments/assets/77438826-80a9-4ab2-9fc3-42407a2d0adb
 - macOS 12 Monterey or later (macOS 12.0+)
 - Intel (`x86_64`) or Apple Silicon (`arm64`) Mac
 
-### Download:
+### ⚡ Instalação Rápida em 1 Clique (Terminal):
+Para baixar, instalar e abrir o Glance automaticamente sem bloqueio do Gatekeeper:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleitonnreiss/glance/main/install.sh)"
+```
+
+---
+
+### 📥 Download Manual:
 
 | Package | Format | Description | Link |
 |---|---|---|---|
-| **`Glance-macOS-Monterey.dmg`** | Disc Image (.dmg) | **Recommended**. Clean drag-and-drop installer. | [Download DMG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.dmg) |
-| **`Glance-macOS-Monterey.pkg`** | Native Installer (.pkg) | Guided 1-click macOS installer. | [Download PKG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.pkg) |
-| **`Glance-macOS-Monterey.zip`** | Portable Archive (.zip) | Standalone pre-compiled application bundle. | [Download ZIP](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.zip) |
+| **`Glance-macOS-Monterey.dmg`** | Disc Image (.dmg) | **Recomendado**. Imagem limpa para arrastar para Aplicativos. | [Baixar DMG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.dmg) |
+| **`Glance-macOS-Monterey.pkg`** | Native Installer (.pkg) | Assistente guiado de instalação em 1 clique. | [Baixar PKG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.pkg) |
+| **`Glance-macOS-Monterey.zip`** | Portable Archive (.zip) | Aplicativo compilado pronto para execução portátil. | [Baixar ZIP](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.zip) |
 
-1. Download and open **`Glance-macOS-Monterey.dmg`**.
-2. Drag **Glance.app** to your **Applications** folder.
-3. Open Glance from `/Applications`.
-4. Grant the requested **Camera** and **Accessibility** permissions.
+#### Como Abrir pelo Instalador DMG:
+1. Baixe o **`Glance-macOS-Monterey.dmg`**.
+2. **Importante (Gatekeeper do macOS)**: Como este é um projeto open-source sem conta paga anual da Apple Developer, o macOS avisa *"desenvolvedor não identificado"*. Para abrir:
+   - Clique com o **botão direito** (ou segure a tecla **Control** e clique) no arquivo `.dmg` baixado e selecione **"Abrir"**.
+   - Na janela que aparecer, clique no botão **"Abrir"**.
+   *(Alternativa: vá em **Preferências do Sistema > Segurança e Privacidade > Geral** e clique em **"Abrir Mesmo Assim"**).*
+3. Arraste o **Glance.app** para a pasta **Applications** (Aplicativos).
+4. Abra o Glance pela pasta Aplicativos e conceda as permissões de **Câmera** e **Acessibilidade**.
 
 
 ## Permissions

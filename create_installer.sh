@@ -49,7 +49,6 @@ hdiutil create -volname "Glance" \
                -srcfolder "$DMG_STAGING" \
                -ov -format UDZO \
                "$DIST_DIR/Glance-macOS-Monterey.dmg"
-codesign --force --sign - "$DIST_DIR/Glance-macOS-Monterey.dmg" 2>/dev/null || true
 
 rm -rf "$DMG_STAGING"
 

@@ -58,16 +58,24 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 
 ## 🛠️ Instruções de Instalação e Permissões
 
-### Pelo Instalador DMG:
-1. Baixe e abra o **`Glance-macOS-Monterey.dmg`**.
-2. Arraste o **Glance.app** para a pasta **Applications** (Aplicativos).
-3. Abra o Glance pela pasta Aplicativos:
-   - Na primeira vez, clique com o **botão direito (ou Control + clique)** sobre o Glance e selecione **Abrir** (Open).
-   - Ou vá em **Preferências do Sistema** > **Segurança e Privacidade** > aba **Geral** e clique em **"Abrir Mesmo Assim"** (Open Anyway).
+### ⚡ Instalação Rápida em 1 Clique (Terminal — Sem bloqueio do Gatekeeper):
+Basta colar no Terminal do Mac:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleitonnreiss/glance/main/install.sh)"
+```
 
-### Pelo Instalador PKG (Recomendado para instalação em 1 clique):
-1. Baixe e abra o **`Glance-macOS-Monterey.pkg`**.
-2. Siga o assistente do macOS. O instalador instala diretamente em `/Applications` e já libera as restrições automaticamente.
+### Pelo Instalador DMG:
+1. Baixe o **`Glance-macOS-Monterey.dmg`**.
+2. **Como abrir no macOS**: Como este é um projeto open-source comunitário (sem anuidade de desenvolvedor pago da Apple), o Gatekeeper avisa *"desenvolvedor não identificado"*.
+   - Basta clicar com o **botão direito (ou segurar Control e clicar)** no arquivo `.dmg` e selecionar **"Abrir"**.
+   - Na janela de confirmação que surgir, clique em **"Abrir"**.
+   *(Ou acesse **Preferências do Sistema > Segurança e Privacidade > Geral** e clique em **"Abrir Mesmo Assim"**).*
+3. Arraste o **Glance.app** para a pasta **Applications** (Aplicativos).
+4. Abra o Glance pela pasta Aplicativos.
+
+### Pelo Instalador PKG:
+1. Baixe o **`Glance-macOS-Monterey.pkg`**.
+2. Clique com o botão direito -> **Abrir** -> **Abrir**. O instalador instala diretamente em `/Applications`.
 
 ### Permissões e Uso:
 1. Conceda as permissões solicitadas:
