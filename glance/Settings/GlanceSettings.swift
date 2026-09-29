@@ -11,6 +11,7 @@ import Combine
 
 /// How long the Touch-ID-unlocked session may sit idle before it re-locks.
 enum AutoLockInterval: Int, CaseIterable, Identifiable {
+    case never = 0
     case oneDay = 1
     case sevenDays = 7
     case fourteenDays = 14
@@ -19,21 +20,28 @@ enum AutoLockInterval: Int, CaseIterable, Identifiable {
     var id: Int { rawValue }
 
     var title: String {
-        rawValue == 1
-            ? L10n.string(.autoLock1Day)
-            : L10n.string(.autoLockDays, rawValue)
+        switch self {
+        case .never:
+            return L10n.string(.autoLockNever)
+        case .oneDay:
+            return L10n.string(.autoLock1Day)
+        default:
+            return L10n.string(.autoLockDays, rawValue)
+        }
     }
 
-    var duration: TimeInterval { TimeInterval(rawValue) * 24 * 60 * 60 }
+    var duration: TimeInterval {
+        rawValue == 0 ? .infinity : TimeInterval(rawValue) * 24 * 60 * 60
+    }
 
-    /// Position in `allCases`, used to drive the discrete 4-stop slider.
+    /// Position in `allCases`, used to drive the discrete slider.
     var sliderIndex: Double {
         Double(Self.allCases.firstIndex(of: self) ?? 0)
     }
 
     static func from(sliderIndex: Double) -> AutoLockInterval {
         let clamped = Int(sliderIndex.rounded())
-        return allCases.indices.contains(clamped) ? allCases[clamped] : .sevenDays
+        return allCases.indices.contains(clamped) ? allCases[clamped] : .never
     }
 }
 
@@ -228,7 +236,10 @@ final class GlanceSettings: ObservableObject {
     /// Enforced by `SessionAutoLocker`, not here — this is only the stored
     /// preference.
     @Published var autoLockInterval: AutoLockInterval {
-        didSet { defaults.set(autoLockInterval.rawValue, forKey: Key.autoLockIntervalDays) }
+        didSet {
+            defaults.set(autoLockInterval.rawValue, forKey: Key.autoLockIntervalDays)
+            defaults.synchronize()
+        }
     }
     /// Device `uniqueID`s, not device objects — devices can disconnect/
     /// reconnect between launches, but their unique ID is stable.
@@ -326,10 +337,10 @@ final class GlanceSettings: ObservableObject {
         preferredDisplayID = defaults.string(forKey: Key.preferredDisplayID)
         preferredDisplayName = defaults.string(forKey: Key.preferredDisplayName)
 
-        // Defaults to 7 days — long enough not to nag daily users, short
-        // enough not to leave an abandoned session live indefinitely.
+        // Defaults to Never — the credential vault stays unlocked continuously
+        // so face unlock and password injection always remain active.
         autoLockInterval = (defaults.object(forKey: Key.autoLockIntervalDays) as? Int)
-            .flatMap(AutoLockInterval.init(rawValue:)) ?? .sevenDays
+            .flatMap(AutoLockInterval.init(rawValue:)) ?? .never
         defaultCameraID = defaults.string(forKey: Key.defaultCameraID)
         builtInDisplayCameraID = defaults.string(forKey: Key.builtInDisplayCameraID)
         externalDisplayCameraID = defaults.string(forKey: Key.externalDisplayCameraID)

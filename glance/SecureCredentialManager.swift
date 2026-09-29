@@ -86,24 +86,21 @@ enum SecureCredentialManager {
         sessionLock.unlock()
         if alreadyUnlocked { return }
 
-        // If the user explicitly locked the vault, respect their decision until manual unlock
-        if UserDefaults.standard.bool(forKey: manuallyLockedKey) {
-            return
-        }
-
         // Verify that credentials exist on disk
         guard KeychainManager.exists(account: sessionKeyAccount) && KeychainManager.exists(account: passwordBlobAccount) else {
             return
         }
 
-        // Check if session has expired based on auto-lock duration
-        let lastTimestamp = UserDefaults.standard.double(forKey: lastActivityTimestampKey)
-        if lastTimestamp > 0 {
-            let lastDate = Date(timeIntervalSince1970: lastTimestamp)
-            let days = UserDefaults.standard.object(forKey: "GlanceSettings.autoLockIntervalDays") as? Int ?? 7
-            let idleLimit: TimeInterval = Double(days) * 24 * 3600
-            if Date().timeIntervalSince(lastDate) >= idleLimit {
-                return
+        // Check if session has expired based on auto-lock duration (0 = never)
+        let days = UserDefaults.standard.object(forKey: "GlanceSettings.autoLockIntervalDays") as? Int ?? 0
+        if days > 0 {
+            let lastTimestamp = UserDefaults.standard.double(forKey: lastActivityTimestampKey)
+            if lastTimestamp > 0 {
+                let lastDate = Date(timeIntervalSince1970: lastTimestamp)
+                let idleLimit: TimeInterval = Double(days) * 24 * 3600
+                if Date().timeIntervalSince(lastDate) >= idleLimit {
+                    return
+                }
             }
         }
 

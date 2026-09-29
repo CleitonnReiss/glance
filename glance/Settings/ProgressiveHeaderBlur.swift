@@ -23,35 +23,16 @@ import SwiftUI
 struct ProgressiveHeaderBlur: View {
     var height: CGFloat
 
-    /// Weakest to strongest. The weakest spans the whole zone (top fully
-    /// opaque, fading to clear by the bottom edge); each stronger material
-    /// after it fades out over a shorter span, so only the topmost band
-    /// accumulates all of them for the strongest combined blur.
-    private static let materials: [Material] = [
-        .ultraThinMaterial, .thinMaterial, .regularMaterial,
-    ]
-
     var body: some View {
-        ZStack(alignment: .top) {
-            ForEach(Array(Self.materials.enumerated()), id: \.offset) { index, material in
-                let fadeEnd = 1 - CGFloat(index) / CGFloat(Self.materials.count)
-                Rectangle()
-                    .fill(material)
-                    .mask(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black, location: 0),
-                                .init(color: .clear, location: fadeEnd),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-            }
-        }
+        LinearGradient(
+            stops: [
+                .init(color: SettingsMetrics.windowTintColor.opacity(0.85), location: 0),
+                .init(color: SettingsMetrics.windowTintColor.opacity(0), location: 1.0),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
         .frame(height: height)
-        // Purely decorative — never intercept clicks meant for the header
-        // buttons layered on top of it or rows scrolling underneath.
         .allowsHitTesting(false)
     }
 }

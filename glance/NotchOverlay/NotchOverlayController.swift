@@ -283,9 +283,9 @@ final class NotchOverlayController: ObservableObject {
             guard let self else { return }
             try? await Task.sleep(nanoseconds: UInt64(self.collapseAnimationDuration * 1_000_000_000))
             guard case .onboarding = self.content else { return }
+            self.windowController.hide()
             self.content = .scan(.idle)
             self.phase = .closed
-            self.windowController.hide()
         }
     }
 

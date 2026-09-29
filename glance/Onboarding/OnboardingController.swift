@@ -1064,7 +1064,7 @@ final class OnboardingController: ObservableObject {
             self.teardown()
             NotchOverlayController.shared.dismissOnboarding()
             if shouldFireCompletion {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                     onComplete?()
                 }
             }

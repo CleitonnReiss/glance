@@ -52,13 +52,10 @@ enum AppResetter {
         monitorTimer?.invalidate()
         monitorTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Task { @MainActor in
-                let fm = FileManager.default
                 let bundleURL = Bundle.main.bundleURL
                 let isInsideTrash = bundleURL.path.contains("/.Trash/") || bundleURL.path.contains("/Trash/")
-                let stillExistsInApplications = fm.fileExists(atPath: "/Applications/Glance.app")
-
-                if isInsideTrash || !stillExistsInApplications {
-                    print("Glance: Bundle was moved to Trash or deleted from /Applications. Purging all user data...")
+                if isInsideTrash {
+                    print("Glance: Bundle was moved to Trash. Purging all user data...")
                     monitorTimer?.invalidate()
                     monitorTimer = nil
                     resetAllUserData(keepApplicationFile: false)

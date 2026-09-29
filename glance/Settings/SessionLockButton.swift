@@ -12,6 +12,7 @@ import SwiftUI
 struct SessionLockButton: View {
     @ObservedObject var pocController: POCController
 
+    @ObservedObject private var settings = GlanceSettings.shared
     @State private var isUnlocking = false
 
     var body: some View {
@@ -39,20 +40,27 @@ struct SessionLockButton: View {
         .disabled(isUnlocking)
         .animation(SettingsMetrics.stateTransitionAnimation, value: pocController.isSessionUnlocked)
         .animation(SettingsMetrics.stateTransitionAnimation, value: isUnlocking)
-        .onAppear { pocController.refreshCredentialStatus() }
+        .onAppear {
+            SecureCredentialManager.tryRestoreSession()
+            pocController.refreshCredentialStatus()
+        }
         // Some unlock paths call SecureCredentialManager directly rather
         // than through this pocController, so this doesn't update
         // reactively on its own — refresh after the notch closes, same as
         // every gated page.
         .onChange(of: NotchOverlayController.shared.phase) { newPhase in
             guard newPhase == .closed else { return }
+            SecureCredentialManager.tryRestoreSession()
             pocController.refreshCredentialStatus()
         }
     }
 
     private var label: String {
-        if pocController.isSessionUnlocked { return "Session unlocked" }
-        return isUnlocking ? "Authenticating…" : "Session locked"
+        let lang = settings.appLanguage
+        if pocController.isSessionUnlocked {
+            return L10n.string(.vaultPillUnlocked, lang: lang)
+        }
+        return isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.vaultPillLocked, lang: lang)
     }
 
     private func toggleSession() {

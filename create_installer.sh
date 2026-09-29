@@ -24,7 +24,14 @@ cp -R build/Glance.app "$PKG_ROOT/Applications/"
 find "$PKG_ROOT" -type d -exec chmod 755 {} +
 find "$PKG_ROOT" -type f -exec chmod 644 {} +
 chmod 755 "$PKG_ROOT/Applications/Glance.app/Contents/MacOS/Glance"
-find "$PKG_ROOT/Applications/Glance.app/Contents/Frameworks" -type f -perm +111 -exec chmod 755 {} + 2>/dev/null || true
+SPARKLE_DIR="$PKG_ROOT/Applications/Glance.app/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE_DIR" ]; then
+    chmod 755 "$SPARKLE_DIR/Versions/B/Sparkle" 2>/dev/null || true
+    chmod 755 "$SPARKLE_DIR/Versions/B/Autoupdate" 2>/dev/null || true
+    chmod 755 "$SPARKLE_DIR/Versions/B/Updater.app/Contents/MacOS/Updater" 2>/dev/null || true
+    chmod 755 "$SPARKLE_DIR/Versions/B/XPCServices/Downloader.xpc/Contents/MacOS/Downloader" 2>/dev/null || true
+    chmod 755 "$SPARKLE_DIR/Versions/B/XPCServices/Installer.xpc/Contents/MacOS/Installer" 2>/dev/null || true
+fi
 
 PKG_PLIST="build/components.plist"
 pkgbuild --analyze --root "$PKG_ROOT" "$PKG_PLIST"
@@ -58,7 +65,14 @@ chmod -R u+rwX,go+rX /Applications/Glance.app 2>/dev/null || true
 find /Applications/Glance.app -type d -exec chmod 755 {} + 2>/dev/null || true
 find /Applications/Glance.app -type f -exec chmod 644 {} + 2>/dev/null || true
 chmod 755 /Applications/Glance.app/Contents/MacOS/Glance 2>/dev/null || true
-find /Applications/Glance.app/Contents/Frameworks -type f -perm +111 -exec chmod 755 {} + 2>/dev/null || true
+SPARKLE_APP_DIR="/Applications/Glance.app/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE_APP_DIR" ]; then
+    chmod 755 "$SPARKLE_APP_DIR/Versions/B/Sparkle" 2>/dev/null || true
+    chmod 755 "$SPARKLE_APP_DIR/Versions/B/Autoupdate" 2>/dev/null || true
+    chmod 755 "$SPARKLE_APP_DIR/Versions/B/Updater.app/Contents/MacOS/Updater" 2>/dev/null || true
+    chmod 755 "$SPARKLE_APP_DIR/Versions/B/XPCServices/Downloader.xpc/Contents/MacOS/Downloader" 2>/dev/null || true
+    chmod 755 "$SPARKLE_APP_DIR/Versions/B/XPCServices/Installer.xpc/Contents/MacOS/Installer" 2>/dev/null || true
+fi
 
 # Register bundle with LaunchServices so it shows up in Applications and Launchpad immediately
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Glance.app 2>/dev/null || true

@@ -19,6 +19,16 @@ final class SettingsWindowController: NSWindowController {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
+        window.hasShadow = true
+
+        let toolbar = NSToolbar(identifier: "GlanceSettingsToolbar")
+        window.toolbar = toolbar
+        window.toolbarStyle = .unified
+
+        let target = SettingsMetrics.windowSize
+        window.setContentSize(target)
+        window.minSize = target
+        window.maxSize = target
         window.center()
         self.init(window: window)
     }

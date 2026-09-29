@@ -65,7 +65,6 @@ struct SettingsWindowView: View {
         // band to the window height.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
-        .background(WindowConfigurator())
         // Cascades to every native control so nothing falls back to the
         // system accent. Only takes effect because the window can become
         // key; see WindowConfiguringView.configure.

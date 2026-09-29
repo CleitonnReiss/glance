@@ -48,7 +48,12 @@ final class SessionAutoLocker {
               let lastActivityAt = SecureCredentialManager.lastActivityAt
         else { return }
 
-        let idleLimit = GlanceSettings.shared.autoLockInterval.duration
+        let interval = GlanceSettings.shared.autoLockInterval
+        if interval == .never || interval.duration == .infinity {
+            return
+        }
+
+        let idleLimit = interval.duration
         guard Date().timeIntervalSince(lastActivityAt) >= idleLimit else { return }
 
         pocController.lockSession()

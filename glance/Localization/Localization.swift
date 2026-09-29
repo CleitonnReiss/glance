@@ -129,8 +129,11 @@ enum L10nKey: String {
     case setPasswordBtn
     case passwordEncryptedTitle
     case autoLockTitle
+    case autoLockNever
     case autoLock1Day
     case autoLockDays
+    case vaultPillUnlocked
+    case vaultPillLocked
     case changePasswordTitle
     case changePasswordBtn
     case removePasswordTitle
@@ -305,8 +308,11 @@ enum L10n {
         .setPasswordBtn: "Set password",
         .passwordEncryptedTitle: "Password encrypted",
         .autoLockTitle: "Auto lock session",
+        .autoLockNever: "Never",
         .autoLock1Day: "1 day",
         .autoLockDays: "%d days",
+        .vaultPillUnlocked: "Vault: Unlocked",
+        .vaultPillLocked: "Vault: Locked",
         .changePasswordTitle: "Change password",
         .changePasswordBtn: "Change",
         .removePasswordTitle: "Remove password",
@@ -475,8 +481,11 @@ enum L10n {
         .setPasswordBtn: "Definir senha",
         .passwordEncryptedTitle: "Senha criptografada",
         .autoLockTitle: "Bloqueio automático da sessão",
+        .autoLockNever: "Nunca",
         .autoLock1Day: "1 dia",
         .autoLockDays: "%d dias",
+        .vaultPillUnlocked: "Cofre: Desbloqueado",
+        .vaultPillLocked: "Cofre: Bloqueado",
         .changePasswordTitle: "Alterar senha",
         .changePasswordBtn: "Alterar",
         .removePasswordTitle: "Remover senha",
@@ -645,8 +654,11 @@ enum L10n {
         .setPasswordBtn: "Establecer contraseña",
         .passwordEncryptedTitle: "Contraseña encriptada",
         .autoLockTitle: "Bloqueo automático de sesión",
+        .autoLockNever: "Nunca",
         .autoLock1Day: "1 día",
         .autoLockDays: "%d días",
+        .vaultPillUnlocked: "Cofre: Desbloqueado",
+        .vaultPillLocked: "Cofre: Bloqueado",
         .changePasswordTitle: "Cambiar contraseña",
         .changePasswordBtn: "Cambiar",
         .removePasswordTitle: "Eliminar contraseña",

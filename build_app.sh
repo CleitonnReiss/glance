@@ -127,7 +127,15 @@ echo "--- Normalizing bundle permissions ---"
 find "$APP_DIR" -type d -exec chmod 755 {} +
 find "$APP_DIR" -type f -exec chmod 644 {} +
 chmod 755 "$MACOS_DIR/Glance"
-find "$FRAMEWORKS_DIR" -type f -perm +111 -exec chmod 755 {} +
+
+SPARKLE="$FRAMEWORKS_DIR/Sparkle.framework"
+if [ -d "$SPARKLE" ]; then
+    chmod 755 "$SPARKLE/Versions/B/Sparkle" 2>/dev/null || true
+    chmod 755 "$SPARKLE/Versions/B/Autoupdate" 2>/dev/null || true
+    chmod 755 "$SPARKLE/Versions/B/Updater.app/Contents/MacOS/Updater" 2>/dev/null || true
+    chmod 755 "$SPARKLE/Versions/B/XPCServices/Downloader.xpc/Contents/MacOS/Downloader" 2>/dev/null || true
+    chmod 755 "$SPARKLE/Versions/B/XPCServices/Installer.xpc/Contents/MacOS/Installer" 2>/dev/null || true
+fi
 
 # 8. Codesign
 echo "--- Codesigning Glance.app inside-out ---"
