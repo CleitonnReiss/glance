@@ -16,9 +16,9 @@ def get_token():
 def api_request(url, method="GET", data=None, headers=None, token=None):
     if headers is None:
         headers = {}
-    headers["Authorization"] = f"Bearer {token}"
+    headers["Authorization"] = "Bearer " + token
     headers["Accept"] = "application/vnd.github+json"
-    headers["User-Agent"] = "Glance-Monterey-Deployer"
+    headers["User-Agent"] = "Glance-Deployer"
     
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     with urllib.request.urlopen(req) as resp:
@@ -32,7 +32,6 @@ def upload_asset(upload_url_template, file_path, token):
     file_size = os.path.getsize(file_path)
     print(f"Uploading {file_name} ({file_size / (1024*1024):.2f} MB)...")
     
-    # upload_url_template is like https://uploads.github.com/repos/owner/repo/releases/ID/assets{?name,label}
     base_url = upload_url_template.split("{")[0]
     upload_url = f"{base_url}?name={file_name}"
     
@@ -40,7 +39,7 @@ def upload_asset(upload_url_template, file_path, token):
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/octet-stream",
         "Content-Length": str(file_size),
-        "User-Agent": "Glance-Monterey-Deployer"
+        "User-Agent": "Glance-Deployer"
     }
     
     with open(file_path, "rb") as f:
@@ -68,83 +67,59 @@ def main():
     with open("RELEASE_NOTES.md", "r", encoding="utf-8") as f:
         release_notes = f.read()
 
-    # 1. Fetch releases
-    print(f"Fetching releases for {repo}...")
+    # 1. Fetch all releases
+    print(f"Fetching all releases for {repo}...")
     releases = api_request(f"https://api.github.com/repos/{repo}/releases", token=token)
     
-    target_tag = "v1.0.1-monterey"
-    target_name = "Glance para macOS Monterey (12.0+) — v1.0.1"
+    # 2. Delete all existing releases so we leave only the single latest release
+    for r in releases:
+        print(f"Deleting older release: {r['name']} (tag: {r['tag_name']}, ID: {r['id']})...")
+        try:
+            api_request(
+                f"https://api.github.com/repos/{repo}/releases/{r['id']}",
+                method="DELETE",
+                token=token
+            )
+            print(f"  ✓ Deleted release ID {r['id']}")
+        except Exception as e:
+            print(f"  ✗ Failed to delete release {r['id']}: {e}")
+
+    # 3. Update git tag v1.0.0 locally and remotely
+    print("Updating tag v1.0.0 to current HEAD...")
+    subprocess.run(["git", "tag", "-d", "v1.0.0"], capture_output=True)
+    subprocess.run(["git", "tag", "v1.0.0"], check=True)
+    subprocess.run(["git", "push", "origin", "v1.0.0", "--force"], check=True)
+
+    # 4. Create single clean release v1.0.0
+    target_tag = "v1.0.0"
+    target_name = "Glance para macOS (Monterey 12.0+) — v1.0.0"
+    print(f"Creating clean single release {target_tag}...")
     
-    existing_target = None
-    for r in releases:
-        if r["tag_name"] == target_tag:
-            existing_target = r
-            break
-            
-    if not existing_target:
-        print(f"Creating release {target_tag}...")
-        payload = json.dumps({
-            "tag_name": target_tag,
-            "target_commitish": "main",
-            "name": target_name,
-            "body": release_notes,
-            "draft": False,
-            "prerelease": False
-        }).encode("utf-8")
-        headers = {"Content-Type": "application/json"}
-        existing_target = api_request(
-            f"https://api.github.com/repos/{repo}/releases",
-            method="POST",
-            data=payload,
-            headers=headers,
-            token=token
-        )
-        print(f"Release {target_tag} created successfully (ID: {existing_target['id']})!")
-    else:
-        print(f"Release {target_tag} already exists (ID: {existing_target['id']}). Updating body...")
-        payload = json.dumps({
-            "name": target_name,
-            "body": release_notes
-        }).encode("utf-8")
-        headers = {"Content-Type": "application/json"}
-        api_request(
-            f"https://api.github.com/repos/{repo}/releases/{existing_target['id']}",
-            method="PATCH",
-            data=payload,
-            headers=headers,
-            token=token
-        )
-        
-    # Delete old assets in target release if any
-    current_assets = existing_target.get("assets", [])
-    for a in current_assets:
-        print(f"Deleting previous asset {a['name']} (ID: {a['id']}) in {target_tag}...")
-        api_request(
-            f"https://api.github.com/repos/{repo}/releases/assets/{a['id']}",
-            method="DELETE",
-            token=token
-        )
-        
-    # Upload new assets to target release
+    payload = json.dumps({
+        "tag_name": target_tag,
+        "target_commitish": "main",
+        "name": target_name,
+        "body": release_notes,
+        "draft": False,
+        "prerelease": False,
+        "make_latest": "true"
+    }).encode("utf-8")
+    
+    headers = {"Content-Type": "application/json"}
+    new_release = api_request(
+        f"https://api.github.com/repos/{repo}/releases",
+        method="POST",
+        data=payload,
+        headers=headers,
+        token=token
+    )
+    print(f"✓ Release {target_tag} created successfully (ID: {new_release['id']})!")
+
+    # 5. Upload installer assets
     for f in files_to_upload:
-        upload_asset(existing_target["upload_url"], f, token)
+        upload_asset(new_release["upload_url"], f, token)
 
-    # 2. Also update v1.0.0-monterey assets if present, so both are up-to-date
-    for r in releases:
-        if r["tag_name"] == "v1.0.0-monterey":
-            print("\nUpdating assets in v1.0.0-monterey as well...")
-            for a in r.get("assets", []):
-                print(f"Deleting older asset {a['name']} (ID: {a['id']}) in v1.0.0-monterey...")
-                api_request(
-                    f"https://api.github.com/repos/{repo}/releases/assets/{a['id']}",
-                    method="DELETE",
-                    token=token
-                )
-            for f in files_to_upload:
-                upload_asset(r["upload_url"], f, token)
-            break
-
-    print("\n🎉 All release assets deployed and updated successfully!")
+    print("\n🎉 Single clean release v1.0.0 deployed successfully with all installer assets!")
 
 if __name__ == "__main__":
     main()
