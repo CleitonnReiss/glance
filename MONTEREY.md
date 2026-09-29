@@ -20,7 +20,8 @@ Originalmente, o projeto exigia **macOS 15 (Sequoia)** devido ao uso intensivo d
 10. [Bloqueio Real de Tela do macOS (`Lock Screen`)](#10-bloqueio-real-de-tela-do-macos-lock-screen)
 11. [Injeção Confiável de Senha e Preservação de Acessibilidade no TCC](#11-injeção-confiável-de-senha-e-preservação-de-acessibilidade-no-tcc)
 12. [Compatibilidade do Ícone da Barra de Menus e Assets SVG](#12-compatibilidade-do-ícone-da-barra-de-menus-e-assets-svg)
-13. [Scripts de Compilação e Geração de Instaladores](#13-scripts-de-compilação-e-geração-de-instaladores)
+13. [Desinstalação Completa e Detecção de Reinstalação Limpa](#13-desinstalação-completa-e-detecção-de-reinstalação-limpa)
+14. [Scripts de Compilação e Geração de Instaladores](#14-scripts-de-compilação-e-geração-de-instaladores)
 
 ---
 
@@ -177,7 +178,29 @@ Todas as classes de estado e modelos reativos foram convertidos para a conformid
 
 ---
 
-## 13. Scripts de Compilação e Geração de Instaladores
+## 13. Desinstalação Completa e Detecção de Reinstalação Limpa
+
+- **Problema**:
+  - No macOS, quando um usuário move um `.app` para a Lixeira, o sistema operacional **não** remove as preferências (`UserDefaults`), dados biométricos em `~/Library/Application Support/glance`, senhas e chaves salvas no Chaveiro (`Keychain`), nem o `LaunchAgent`.
+  - Como consequência, ao excluir o Glance e reinstalá-lo mais tarde, o app encontrava dados residuais e considerava o onboarding como concluído, deixando de exibir o assistente inicial e podendo até entrar em estados inconsistentes com o Chaveiro.
+- **Solução Implementada**:
+  1. **Módulo [`glance/AppResetter.swift`](glance/AppResetter.swift)**:
+     - Adiciona a função `resetAllUserData()`, que limpa atomicamente o Chaveiro (`sessionKey`, `encryptedPassword`), apaga a pasta `~/Library/Application Support/glance`, remove o LaunchAgent, limpa caches e reseta o `UserDefaults`.
+     - Adiciona a ação `promptUninstall()`: exibe confirmação nativa, remove todos os dados residuais do Mac, move o aplicativo para a Lixeira do macOS (`NSWorkspace.shared.recycle`) e encerra o processo.
+     - Adiciona a ação `promptResetAndReconfigure()`: limpa os dados e reabre imediatamente a janela de Onboarding inicial para reconfiguração do zero sem precisar deletar o app.
+  2. **Detecção Automática de Nova Instalação (`verifyInstallationIntegrity`)**:
+     - Monitora a assinatura de arquivo no disco (Inode e data de criação `birthtime` do bundle em `/Applications/Glance.app`).
+     - Se o usuário excluir o app para a Lixeira manualmente e depois baixar/instalar uma nova cópia, o Glance detecta a mudança de Inode na inicialização, limpa automaticamente qualquer sobra antiga e inicia 100% como novo, apresentando o Onboarding original de fábrica.
+  3. **Interface de Usuário**:
+     - Menu do aplicativo: Adicionados os itens **"Reset & Reconfigure..."** e **"Uninstall Glance Completely..."**.
+     - Tela Sobre (Settings > About): Adicionados botões de ação dedicados para Redefinir Configuração e Desinstalar.
+  4. **Utilitário de Desinstalação Independente**:
+     - Criado o script [`uninstall.sh`](uninstall.sh) na raiz do repositório.
+     - Incluído o executável **`Desinstalar Glance.command`** dentro da imagem de disco `.dmg`, permitindo desinstalar tudo com um duplo clique.
+
+---
+
+## 14. Scripts de Compilação e Geração de Instaladores
 
 Foram incluídos scripts prontos e independentes na raiz do projeto:
 

@@ -89,6 +89,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let resetItem = NSMenuItem(title: "Reset & Reconfigure...", action: #selector(promptReset), keyEquivalent: "")
+        resetItem.target = self
+        resetItem.image = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)
+        menu.addItem(resetItem)
+
+        let uninstallItem = NSMenuItem(title: "Uninstall Glance Completely...", action: #selector(promptUninstall), keyEquivalent: "")
+        uninstallItem.target = self
+        uninstallItem.image = NSImage(systemSymbolName: "trash.fill", accessibilityDescription: nil)
+        menu.addItem(uninstallItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quitItem.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)
         menu.addItem(quitItem)
@@ -108,6 +120,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             name: NSWindow.willCloseNotification, object: nil
         )
 
+        // Verify installation integrity: if the app was reinstalled or replaced on disk,
+        // automatically reset stale state so it begins cleanly with onboarding.
+        AppResetter.verifyInstallationIntegrity()
+
         // Deferred until onboarding is done — Sparkle's own "Check for updates automatically?" consent alert fires the moment
         // it starts on a fresh install, and starting unconditionally here used to pop it mid-onboarding.
         if GlanceSettings.shared.hasCompletedOnboarding {
@@ -125,7 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// First-run gate: onboarding lives entirely in the notch, so this stays accessory. Called once at launch if onboarding
     /// isn't done, and again from `revealSettingsWindow()` if the user reaches Settings mid-flow. Closing any main window here
     /// is defense in depth against SwiftUI's `.suppressed` scene timing not being guaranteed.
-    private func presentOnboardingGate() {
+    func presentOnboardingGate() {
         for window in NSApp.windows where window.canBecomeMain {
             window.close()
         }
@@ -262,4 +278,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindowController?.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+    @objc private func promptReset() {
+        AppResetter.promptResetAndReconfigure { [weak self] in
+            DispatchQueue.main.async {
+                self?.settingsWindowController?.close()
+                self?.settingsWindowController = nil
+                self?.presentOnboardingGate()
+            }
+        }
+    }
+
+    @objc private func promptUninstall() {
+        AppResetter.promptUninstall()
+    }
 }
+

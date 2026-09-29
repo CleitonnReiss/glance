@@ -51,6 +51,67 @@ INSTRUÇÕES DE INSTALAÇÃO:
 6. Pronto! Para bloquear e testar a qualquer momento, use o menu do Glance ou o atalho Ctrl+Cmd+L (⌃⌘L).
 EOF
 
+cat << 'EOF' > "$DMG_STAGING/Desinstalar Glance.command"
+#!/bin/bash
+clear
+echo "=================================================="
+echo "    Desinstalador Completo do Glance (macOS)      "
+echo "=================================================="
+echo ""
+echo "Este script removerá completamente o Glance do seu computador:"
+echo " - Dados faciais em ~/Library/Application Support/glance"
+echo " - Senhas e chaves salvas no Chaveiro do macOS (Keychain)"
+echo " - Preferências salvas em ~/Library/Preferences"
+echo " - Inicialização automática (LaunchAgent)"
+echo " - O aplicativo /Applications/Glance.app"
+echo ""
+read -p "Deseja prosseguir com a desinstalação completa? (s/N): " confirm
+if [[ "$confirm" != "s" && "$confirm" != "S" ]]; then
+    echo "Operação cancelada pelo usuário."
+    exit 0
+fi
+
+echo "1. Encerrando o Glance se estiver em execução..."
+killall Glance 2>/dev/null || true
+
+echo "2. Removendo senhas e chaves salvas do Chaveiro (Keychain)..."
+security delete-generic-password -s com.jonathan.glance -a encryptedPassword 2>/dev/null || true
+security delete-generic-password -s com.jonathan.glance -a sessionKey 2>/dev/null || true
+security delete-generic-password -s com.jonathan.glance 2>/dev/null || true
+
+echo "3. Removendo dados de cadastro facial e suporte..."
+rm -rf ~/Library/Application\ Support/glance
+
+echo "4. Removendo preferências e configurações salvas..."
+defaults delete com.jonathan.glance 2>/dev/null || true
+rm -f ~/Library/Preferences/com.jonathan.glance.plist
+
+echo "5. Removendo inicialização automática (LaunchAgent)..."
+launchctl unload ~/Library/LaunchAgents/com.jonathan.glance.plist 2>/dev/null || true
+rm -f ~/Library/LaunchAgents/com.jonathan.glance.plist
+
+echo "6. Limpando caches..."
+rm -rf ~/Library/Caches/com.jonathan.glance
+
+echo "7. Redefinindo permissões de Acessibilidade no TCC..."
+tccutil reset Accessibility com.jonathan.glance 2>/dev/null || true
+
+echo "8. Removendo o aplicativo /Applications/Glance.app..."
+rm -rf /Applications/Glance.app
+
+echo ""
+echo "=================================================="
+echo "✅ Pronto! O Glance e todas as suas configurações"
+echo "foram completamente desinstalados do seu computador."
+echo "Quando você reinstalar o app, ele iniciará 100% do zero."
+echo "=================================================="
+echo ""
+echo "Pressione qualquer tecla para fechar esta janela."
+read -n 1
+exit 0
+EOF
+chmod +x "$DMG_STAGING/Desinstalar Glance.command"
+
 rm -f "$DIST_DIR/Glance-macOS-Monterey.dmg"
 hdiutil create -volname "Glance" \
                -srcfolder "$DMG_STAGING" \

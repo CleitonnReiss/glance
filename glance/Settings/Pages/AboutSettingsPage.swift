@@ -72,6 +72,28 @@ struct AboutSettingsPage: View {
                 }
             }
         }
+
+        SettingsGroup {
+            SettingsActionRowContent(
+                title: "Reset Configuration",
+                buttonTitle: "Reset"
+            ) {
+                AppResetter.promptResetAndReconfigure {
+                    if let appDelegate = NSApp.delegate as? AppDelegate {
+                        appDelegate.presentOnboardingGate()
+                    }
+                }
+            }
+
+            SettingsGroupDivider()
+
+            SettingsActionRowContent(
+                title: "Uninstall Glance",
+                buttonTitle: "Uninstall"
+            ) {
+                AppResetter.promptUninstall()
+            }
+        }
     }
 
     private func handleIconTap() {

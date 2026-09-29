@@ -45,6 +45,11 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 - Corrigida a invisibilidade do ícone na barra superior: o macOS 12 não carregava arquivos `.svg` avulsos pelo AppKit.
 - Criado gerador de PNGs de alta resolução (`@1x` e `@2x`) e um desenhista vetorial nativo via CoreGraphics com `isTemplate = true`, garantindo que o logo apareça nítido em telas normais e Retina, com suporte dinâmico aos modos Claro e Escuro.
 
+### 6. 🧹 Desinstalação Completa e Detecção Automática de Reinstalação Limpa
+- **Desinstalação Sem Rastros**: Adicionada a opção **"Uninstall Glance Completely..."** no menu da barra superior e na aba Sobre das preferências. Remove com um clique todos os dados biométricos, senhas do Chaveiro, configurações salvas, LaunchAgent e move o app para a Lixeira.
+- **Detecção de Reinstalação de Fábrica**: O app agora monitora o identificador do bundle no disco. Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
+- **Utilitário Dedicado**: Incluído o atalho executável **`Desinstalar Glance.command`** dentro do arquivo `.dmg` e o script `uninstall.sh`.
+
 ---
 
 ## 🛠️ Instruções de Instalação e Permissões

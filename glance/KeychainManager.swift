@@ -122,6 +122,15 @@ enum KeychainManager {
         }
     }
 
+    /// Deletes all items associated with this service from the Keychain.
+    nonisolated static func deleteAllItems() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     /// `.userPresence` requires Touch ID or device password, with no separate no-hardware handling needed.
     nonisolated static func makeUserPresenceAccessControl() throws -> SecAccessControl {
         var accessError: Unmanaged<CFError>?
