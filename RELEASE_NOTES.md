@@ -46,20 +46,28 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 - Criado gerador de PNGs de alta resolução (`@1x` e `@2x`) e um desenhista vetorial nativo via CoreGraphics com `isTemplate = true`, garantindo que o logo apareça nítido em telas normais e Retina, com suporte dinâmico aos modos Claro e Escuro.
 
 ### 6. 🧹 Desinstalação Completa e Detecção Automática de Reinstalação Limpa
-- **Desinstalação Sem Rastros**: Adicionada a opção **"Uninstall Glance Completely..."** no menu da barra superior e na aba Sobre das preferências. Remove com um clique todos os dados biométricos, senhas do Chaveiro, configurações salvas, LaunchAgent e move o app para a Lixeira.
-- **Detecção de Reinstalação de Fábrica**: O app agora monitora o identificador do bundle no disco. Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
-- **Utilitário Dedicado**: Incluído o atalho executável **`Desinstalar Glance.command`** dentro do arquivo `.dmg` e o script `uninstall.sh`.
+- **Desinstalação Sem Rastros 100% Integrada**: Adicionada a opção **"Uninstall Glance Completely..."** no menu da barra superior e na aba Sobre das preferências. Remove com um clique todos os dados biométricos, senhas do Chaveiro, configurações salvas, LaunchAgent e move o app para a Lixeira, sem precisar de scripts externos.
+- **Detecção de Reinstalação de Fábrica**: O app monitora o identificador do bundle no disco. Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
+- **Instalador DMG Limpo e Seguro**: A imagem de disco contém estritamente o `Glance.app` e o atalho para a pasta `Applications`.
 
 ---
 
 ## 🛠️ Instruções de Instalação e Permissões
 
+### Pelo Instalador DMG:
 1. Baixe e abra o **`Glance-macOS-Monterey.dmg`**.
 2. Arraste o **Glance.app** para a pasta **Applications** (Aplicativos).
-3. Abra o Glance pela pasta Aplicativos ou pelo Spotlight/Launchpad.
-   - *Se o macOS exibir aviso de desenvolvedor não verificado:* Abra **Preferências do Sistema** > **Segurança e Privacidade** > aba **Geral** e clique em **"Abrir Mesmo Assim"**.
-4. Conceda as duas permissões necessárias:
+3. Abra o Glance pela pasta Aplicativos:
+   - Na primeira vez, clique com o **botão direito (ou Control + clique)** sobre o Glance e selecione **Abrir** (Open).
+   - Ou vá em **Preferências do Sistema** > **Segurança e Privacidade** > aba **Geral** e clique em **"Abrir Mesmo Assim"** (Open Anyway).
+
+### Pelo Instalador PKG (Recomendado para instalação em 1 clique):
+1. Baixe e abra o **`Glance-macOS-Monterey.pkg`**.
+2. Siga o assistente do macOS. O instalador instala diretamente em `/Applications` e já libera as restrições automaticamente.
+
+### Permissões e Uso:
+1. Conceda as permissões solicitadas:
    - **Câmera**: para reconhecimento facial local (os frames nunca saem da memória).
    - **Acessibilidade**: para permitir que o Glance digite sua senha de forma automatizada na tela de login.
-5. Siga o assistente no entalhe para cadastrar seu rosto e salvar a senha do Mac.
-6. Pressione **⌃⌘L** a qualquer momento para bloquear e testar o desbloqueio facial!
+2. Siga o assistente no entalhe para cadastrar seu rosto e salvar a senha do Mac.
+3. Pressione **⌃⌘L** a qualquer momento para bloquear e testar o desbloqueio facial!

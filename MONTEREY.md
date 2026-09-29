@@ -191,12 +191,10 @@ Todas as classes de estado e modelos reativos foram convertidos para a conformid
   2. **Detecção Automática de Nova Instalação (`verifyInstallationIntegrity`)**:
      - Monitora a assinatura de arquivo no disco (Inode e data de criação `birthtime` do bundle em `/Applications/Glance.app`).
      - Se o usuário excluir o app para a Lixeira manualmente e depois baixar/instalar uma nova cópia, o Glance detecta a mudança de Inode na inicialização, limpa automaticamente qualquer sobra antiga e inicia 100% como novo, apresentando o Onboarding original de fábrica.
-  3. **Interface de Usuário**:
-     - Menu do aplicativo: Adicionados os itens **"Reset & Reconfigure..."** e **"Uninstall Glance Completely..."**.
+  3. **Interface Integrada de Usuário**:
+     - Menu da Barra Superior: Adicionados os itens **"Reset & Reconfigure..."** e **"Uninstall Glance Completely..."**.
      - Tela Sobre (Settings > About): Adicionados botões de ação dedicados para Redefinir Configuração e Desinstalar.
-  4. **Utilitário de Desinstalação Independente**:
-     - Criado o script [`uninstall.sh`](uninstall.sh) na raiz do repositório.
-     - Incluído o executável **`Desinstalar Glance.command`** dentro da imagem de disco `.dmg`, permitindo desinstalar tudo com um duplo clique.
+     - Ao clicar em "Uninstall", o app apaga todas as chaves e dados biométricos e move o próprio executável para a Lixeira, mantendo a pasta do instalador limpa sem scripts adicionais.
 
 ---
 
@@ -215,7 +213,7 @@ Compila os arquivos Swift para `x86_64-apple-macos12.0` com otimização complet
 ./create_installer.sh
 ```
 Gera na pasta `dist/`:
-- **`Glance-macOS-Monterey.dmg`**: Imagem de disco padrão para macOS com atalho de arrastar para `/Applications` e instruções de instalação.
+- **`Glance-macOS-Monterey.dmg`**: Imagem de disco limpa contendo exclusivamente o `Glance.app` e o atalho para `/Applications`.
 - **`Glance-macOS-Monterey.pkg`**: Instalador interativo nativo do macOS para instalação automatizada em `/Applications`.
 - **`Glance-macOS-Monterey.zip`**: Pacote compactado do aplicativo pronto para distribuição em GitHub Releases.
 
