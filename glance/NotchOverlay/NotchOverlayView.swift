@@ -27,7 +27,7 @@ private struct InteractivePanelFramePreferenceKey: PreferenceKey {
 }
 
 struct NotchOverlayView: View {
-    let controller: NotchOverlayController
+    @ObservedObject var controller: NotchOverlayController
 
     @State private var isHovering = false
 
@@ -287,6 +287,7 @@ struct NotchOverlayView: View {
         // Drives the per-step resize while onboarding is active — `visualIsExpanded`
         // alone only fires on entering/leaving the expanded state.
         .animation(expansionAnimation(entering: true), value: onboardingController?.panelSize)
+        .animation(expansionAnimation(entering: true), value: currentSize)
         .blur(radius: panelBlur)
         // Applied after the shadow so both travel together, before `.onHover`.
         .offset(y: verticalOffset)
@@ -311,7 +312,7 @@ struct NotchOverlayView: View {
             lockUnlockTask?.cancel()
             lockUnlockTask = nil
         }
-        .onChange(of: controller.phase) { _, newPhase in
+        .onChange(of: controller.phase) { newPhase in
             scheduleChoreography()
             updateScanPulse()
             updateMinimalLock()
@@ -319,7 +320,7 @@ struct NotchOverlayView: View {
                 performHapticFeedback(.levelChange)
             }
         }
-        .onChange(of: controller.isPillDocked) { _, _ in scheduleChoreography() }
+        .onChange(of: controller.isPillDocked) { _ in scheduleChoreography() }
         .frame(
             width: NotchGeometry.windowSize(for: style).width,
             height: NotchGeometry.windowSize(for: style).height,
@@ -364,7 +365,7 @@ struct NotchOverlayView: View {
             let delay = NotchGeometry.pillEnterExpansionDelay
             let animation = expansionAnimation(entering: true)
             choreographyTask = Task {
-                try? await Task.sleep(for: .seconds(delay))
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 guard !Task.isCancelled else { return }
                 withAnimation(animation) { self.visualIsExpanded = wantExpanded }
             }
@@ -374,7 +375,7 @@ struct NotchOverlayView: View {
             let delay = NotchGeometry.pillExitSlideDelay
             let animation = slideAnimation
             choreographyTask = Task {
-                try? await Task.sleep(for: .seconds(delay))
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 guard !Task.isCancelled else { return }
                 withAnimation(animation) { self.visualIsPositioned = wantPositioned }
             }
@@ -427,7 +428,7 @@ struct NotchOverlayView: View {
             return
         }
         lockUnlockTask = Task {
-            try? await Task.sleep(for: .seconds(delay))
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard !Task.isCancelled else { return }
             self.isMinimalLockOpen = true
         }
@@ -448,14 +449,14 @@ struct NotchOverlayView: View {
         let half = NotchGeometry.scanPulseHalfCycleDuration
         let hold = NotchGeometry.scanPulseHoldDuration
         scanPulseTask = Task {
-            try? await Task.sleep(for: .seconds(entryDelay))
+            try? await Task.sleep(nanoseconds: UInt64(max(entryDelay, 0) * 1_000_000_000))
             while !Task.isCancelled {
                 withAnimation(.easeInOut(duration: half)) { self.isScanPulseDimmed = true }
-                try? await Task.sleep(for: .seconds(half + hold))
+                try? await Task.sleep(nanoseconds: UInt64(max(half + hold, 0) * 1_000_000_000))
                 guard !Task.isCancelled else { break }
 
                 withAnimation(.easeInOut(duration: half)) { self.isScanPulseDimmed = false }
-                try? await Task.sleep(for: .seconds(half + hold))
+                try? await Task.sleep(nanoseconds: UInt64(max(half + hold, 0) * 1_000_000_000))
             }
         }
     }

@@ -11,11 +11,10 @@
 
 import AppKit
 import SwiftUI
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class NotchOverlayController {
+final class NotchOverlayController: ObservableObject {
     /// One overlay window for the whole app — sharing one instance guarantees
     /// the triggers never run concurrently, rather than leaving that incidental.
     static let shared = NotchOverlayController()
@@ -50,27 +49,44 @@ final class NotchOverlayController {
         }
     }
 
-    private(set) var phase: Phase = .closed
-    private(set) var content: Content = .scan(.idle)
+    @Published private(set) var phase: Phase = .closed
+    private var onboardingCancellable: AnyCancellable?
+
+    @Published private(set) var content: Content = .scan(.idle) {
+        didSet {
+            bindOnboarding()
+        }
+    }
+
+    private func bindOnboarding() {
+        onboardingCancellable = nil
+        if case .onboarding(let obController) = content {
+            onboardingCancellable = obController.$step
+                .dropFirst()
+                .sink { [weak self] _ in
+                    self?.objectWillChange.send()
+                }
+        }
+    }
     /// Read-only convenience for the scan-mode view/callers — `.idle` while
     /// onboarding owns the panel.
     var media: ScanMedia {
         if case .scan(let media) = content { return media }
         return .idle
     }
-    private(set) var geometry: NotchGeometry = .forMainScreen()
+    @Published private(set) var geometry: NotchGeometry = .forMainScreen()
     /// Read by the view for the hover-driven size/shadow bump — irrelevant
     /// to the phase state machine itself.
-    private(set) var isArmed = false
+    @Published private(set) var isArmed = false
 
     /// Pill style only: whether the pill is parked on screen at rest vs. off-screen.
     /// Deliberately separate from `isArmed` — it lags it by a frame on the way in
     /// (making the pill slide into place) and leads it on the way out.
-    private(set) var isPillDocked = false
+    @Published private(set) var isPillDocked = false
 
     /// Snapshotted from `GlanceSettings` when a cycle begins rather than read live,
     /// so a settings change mid-attempt can't resize the panel or change how it resolves.
-    private(set) var activeUnlockStyle: UnlockAnimationStyle = .original
+    @Published private(set) var activeUnlockStyle: UnlockAnimationStyle = .original
 
     /// What a hover-driven activation should do — set by `arm()` (persists
     /// across scan cycles) or by one-shot `present(onRetry:)` (single use).
@@ -84,17 +100,17 @@ final class NotchOverlayController {
     private var hasPrimedWindow = false
 
     /// Matches the success asset duration (~1.22s) plus a short beat to read the final frame.
-    private let successHoldDuration: Duration = .milliseconds(1_700)
+    private let successHoldDuration: TimeInterval = 1.7
     /// Non-private so FaceUnlockCoordinator's auto-retry can wait this out too.
-    let failureHoldDuration: Duration = .seconds(5)
+    let failureHoldDuration: TimeInterval = 5.0
     /// Reads the same setting as `FaceUnlockCoordinator.scanWindowDuration` so
     /// the two separate timers expire together.
-    private var scanTimeoutDuration: Duration {
-        .seconds(GlanceSettings.shared.faceDetectionSeconds)
+    private var scanTimeoutDuration: TimeInterval {
+        TimeInterval(GlanceSettings.shared.faceDetectionSeconds)
     }
     /// Long enough for the closing spring to fully settle before the window is
     /// hidden/left closed — collapsing state too early made the window visibly pop away.
-    let collapseAnimationDuration: Duration = .milliseconds(700)
+    let collapseAnimationDuration: TimeInterval = 0.7
 
     private init() {
         windowController.contentView = NSHostingView(rootView: NotchOverlayView(controller: self))
@@ -167,7 +183,8 @@ final class NotchOverlayController {
         // The pill is visible at rest, so hiding the window right now would blink it
         // away instead of playing the slide-up (visibility check above skips hidden windows).
         Task { [weak self] in
-            try? await Task.sleep(for: self?.collapseAnimationDuration ?? .milliseconds(700))
+            let delay = self?.collapseAnimationDuration ?? 0.7
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard let self, !self.isArmed, self.phase == .closed else { return }
             self.windowController.hide()
         }
@@ -185,7 +202,8 @@ final class NotchOverlayController {
         updateInteractivity()
 
         scanTimeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: self?.scanTimeoutDuration ?? .seconds(5))
+            let delay = self?.scanTimeoutDuration ?? 5.0
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard let self, !Task.isCancelled, self.phase == .scanning else { return }
             await self.collapse()
         }
@@ -196,7 +214,7 @@ final class NotchOverlayController {
     /// On the very first show, `present()`/`presentOnboarding()` would otherwise render
     /// already-expanded with no prior "closed" frame for SwiftUI to animate away from.
     /// This runs one real closed-state show+render pass first, only on that first call.
-    private func primeWindowIfNeeded(_ completion: @escaping () -> Void) {
+    private func primeWindowIfNeeded(_ completion: @escaping @MainActor () -> Void) {
         guard !hasPrimedWindow else {
             completion()
             return
@@ -206,7 +224,9 @@ final class NotchOverlayController {
         phase = .closed
         windowController.show()
         windowController.displaySynchronously()
-        DispatchQueue.main.async(execute: completion)
+        DispatchQueue.main.async {
+            completion()
+        }
     }
 
     // MARK: - One-shot mode (onboarding, Face Lab preview)
@@ -224,11 +244,11 @@ final class NotchOverlayController {
         geometry = windowController.currentGeometry
         activeUnlockStyle = styleOverride ?? GlanceSettings.shared.effectiveUnlockAnimationStyle
         primeWindowIfNeeded { [weak self] in
-            guard let self else { return }
-            content = .scan(.idle)
-            phase = .scanning
-            windowController.show()
-            updateInteractivity()
+            guard let self = self else { return }
+            self.content = .scan(.idle)
+            self.phase = .scanning
+            self.windowController.show()
+            self.updateInteractivity()
         }
     }
 
@@ -243,11 +263,11 @@ final class NotchOverlayController {
         scanTimeoutTask?.cancel(); scanTimeoutTask = nil
         geometry = windowController.currentGeometry
         primeWindowIfNeeded { [weak self] in
-            guard let self else { return }
-            content = .onboarding(controller)
-            phase = .onboarding
-            windowController.show()
-            updateInteractivity()
+            guard let self = self else { return }
+            self.content = .onboarding(controller)
+            self.phase = .onboarding
+            self.windowController.show()
+            self.updateInteractivity()
         }
     }
 
@@ -261,7 +281,7 @@ final class NotchOverlayController {
         updateInteractivity()
         Task { [weak self] in
             guard let self else { return }
-            try? await Task.sleep(for: self.collapseAnimationDuration)
+            try? await Task.sleep(nanoseconds: UInt64(self.collapseAnimationDuration * 1_000_000_000))
             guard case .onboarding = self.content else { return }
             self.content = .scan(.idle)
             self.phase = .closed
@@ -285,10 +305,10 @@ final class NotchOverlayController {
         phase = success ? .success : .failure
         updateInteractivity()
 
-        let hold = shouldAnimate ? (success ? successHoldDuration : failureHoldDuration) : Duration.milliseconds(400)
+        let hold: TimeInterval = shouldAnimate ? (success ? successHoldDuration : failureHoldDuration) : 0.4
         resolveTask = Task { [weak self] in
             guard let self else { return }
-            try? await Task.sleep(for: hold)
+            try? await Task.sleep(nanoseconds: UInt64(hold * 1_000_000_000))
             guard !Task.isCancelled else { return }
             await self.collapse()
         }
@@ -328,7 +348,7 @@ final class NotchOverlayController {
         guard phase != .closed, phase != .collapsing else { return }
         phase = .collapsing
         updateInteractivity()
-        try? await Task.sleep(for: collapseAnimationDuration)
+        try? await Task.sleep(nanoseconds: UInt64(collapseAnimationDuration * 1_000_000_000))
         guard phase == .collapsing else { return }
 
         // Same re-measure as `disarm()` — self-corrects a geometry captured

@@ -11,9 +11,8 @@ import SwiftUI
 
 @MainActor
 final class EnrollmentSweepWindowController {
-    @Observable
-    final class Host {
-        var isPresented = false
+    final class Host: ObservableObject {
+        @Published var isPresented = false
         let controller: OnboardingController
 
         init(controller: OnboardingController) {
@@ -36,7 +35,9 @@ final class EnrollmentSweepWindowController {
         host.isPresented = true
 
         let hostingView = NSHostingView(rootView: EnrollmentSweepOverlay(host: host))
-        hostingView.sizingOptions = []
+        if #available(macOS 13.0, *) {
+            hostingView.sizingOptions = []
+        }
         hostingView.frame = NSRect(origin: .zero, size: screen.frame.size)
 
         let window = makePanel(on: screen, contentView: hostingView)
@@ -56,7 +57,9 @@ final class EnrollmentSweepWindowController {
         guard let screen = NotchGeometry.preferredScreen() else { return }
 
         let hostingView = NSHostingView(rootView: EnrollmentDirectionSweep(direction: direction))
-        hostingView.sizingOptions = []
+        if #available(macOS 13.0, *) {
+            hostingView.sizingOptions = []
+        }
         hostingView.frame = NSRect(origin: .zero, size: screen.frame.size)
 
         let window = makePanel(on: screen, contentView: hostingView)
@@ -64,7 +67,7 @@ final class EnrollmentSweepWindowController {
         self.window = window
 
         dismissTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(OnboardingMetrics.introSweepAutoDismissDelay))
+            try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.introSweepAutoDismissDelay * 1_000_000_000))
             guard let self, !Task.isCancelled else { return }
             self.tearDownWindow()
             self.dismissTask = nil
@@ -104,7 +107,7 @@ final class EnrollmentSweepWindowController {
         }
         host.isPresented = false
         dismissTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(OnboardingMetrics.sweepFadeOut))
+            try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.sweepFadeOut * 1_000_000_000))
             guard !Task.isCancelled else { return }
             tearDownWindow()
             dismissTask = nil
@@ -121,7 +124,7 @@ final class EnrollmentSweepWindowController {
 // MARK: - Overlay root
 
 private struct EnrollmentSweepOverlay: View {
-    @Bindable var host: EnrollmentSweepWindowController.Host
+    @ObservedObject var host: EnrollmentSweepWindowController.Host
     @State private var playingDirection: EnrollmentSweepDirection?
     @State private var playTask: Task<Void, Never>?
 
@@ -146,10 +149,13 @@ private struct EnrollmentSweepOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: direction, initial: true) { _, newDirection in
+        .onAppear {
+            scheduleSweep(direction, canPlay: canPlay)
+        }
+        .onChange(of: direction) { newDirection in
             scheduleSweep(newDirection, canPlay: canPlay)
         }
-        .onChange(of: canPlay) { _, playable in
+        .onChange(of: canPlay) { playable in
             if !playable {
                 playTask?.cancel()
                 playingDirection = nil
@@ -180,7 +186,7 @@ private struct EnrollmentSweepOverlay: View {
         }
         playingDirection = nil
         playTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(OnboardingMetrics.sweepPoseDelay))
+            try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.sweepPoseDelay * 1_000_000_000))
             guard !Task.isCancelled else { return }
             playingDirection = newDirection
         }

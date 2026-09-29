@@ -8,11 +8,10 @@
 //
 
 import SwiftUI
-import Charts
 
 struct FaceLabView: View {
     /// Injected from AppEnvironment so Recognition settings reads calibration data from this same instance.
-    @Bindable var controller: FaceLabController
+    @ObservedObject var controller: FaceLabController
 
     var body: some View {
         ScrollView {
@@ -24,19 +23,19 @@ struct FaceLabView: View {
                     Button("Preview ✓") {
                         NotchOverlayController.shared.present()
                         Task {
-                            try? await Task.sleep(for: .seconds(1.5))
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
                             NotchOverlayController.shared.finish(success: true)
                         }
                     }
                     Button("Preview ✗") {
                         NotchOverlayController.shared.present(onRetry: {
                             Task {
-                                try? await Task.sleep(for: .seconds(1.5))
+                                try? await Task.sleep(nanoseconds: 1_500_000_000)
                                 NotchOverlayController.shared.finish(success: false)
                             }
                         })
                         Task {
-                            try? await Task.sleep(for: .seconds(1.5))
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
                             NotchOverlayController.shared.finish(success: false)
                         }
                     }
@@ -46,16 +45,18 @@ struct FaceLabView: View {
                     .disabled(enrollmentFlowIsRunning)
                 }
 
-                modelStatusSection
-                sessionLockSection
-                previewSection
-                detectionSection
-                livenessSection
-                enrollSection
-                identitiesSection
-                recognizeSection
-                calibrationSection
-                logSection
+                Group {
+                    modelStatusSection
+                    sessionLockSection
+                    previewSection
+                    detectionSection
+                    livenessSection
+                    enrollSection
+                    identitiesSection
+                    recognizeSection
+                    calibrationSection
+                    logSection
+                }
             }
             .padding(20)
         }
@@ -64,7 +65,7 @@ struct FaceLabView: View {
         }
         // Guided enrollment runs in the notch, outside this view hierarchy, so nothing else prompts a re-read once
         // it closes. Same trick YourFaceSettingsPage uses.
-        .onChange(of: NotchOverlayController.shared.phase) { _, newPhase in
+        .onChange(of: NotchOverlayController.shared.phase) { newPhase in
             guard newPhase == .closed else { return }
             controller.store.reloadIfUnlocked()
         }
@@ -554,20 +555,10 @@ struct FaceLabView: View {
                 .disabled(controller.recognitionResults.isEmpty && controller.calibrationSamples.isEmpty)
 
                 if !controller.calibrationSamples.isEmpty {
-                    Chart {
-                        ForEach(controller.calibrationSamples) { sample in
-                            PointMark(
-                                x: .value("Similarity", sample.centroidSimilarity),
-                                y: .value("Type", sample.isGenuine ? "Genuine" : "Impostor")
-                            )
-                            .foregroundStyle(sample.isGenuine ? Color.green : Color.red)
-                        }
-                        RuleMark(x: .value("Threshold", controller.threshold))
-                            .foregroundStyle(.blue)
-                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [4, 4]))
-                    }
-                    .chartXScale(domain: -1...1)
-                    .frame(height: 100)
+                    CalibrationChartView(
+                        samples: controller.calibrationSamples,
+                        threshold: controller.threshold
+                    )
 
                     if let suggested = controller.suggestedThreshold {
                         HStack {
@@ -686,6 +677,64 @@ private struct IdentityRow: View {
     }
 }
 
-#Preview {
-    FaceLabView(controller: FaceLabController())
+private struct CalibrationChartView: View {
+    let samples: [CalibrationSample]
+    let threshold: Double
+
+    private func xPos(_ val: Float, width: CGFloat) -> CGFloat {
+        let norm = CGFloat((val + 1.0) / 2.0)
+        return max(8, min(width - 8, norm * width))
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(NSColor.controlBackgroundColor))
+
+                Path { p in
+                    p.move(to: CGPoint(x: w / 2, y: 0))
+                    p.addLine(to: CGPoint(x: w / 2, y: h))
+                }
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+
+                Text("Impostor")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .position(x: 35, y: h * 0.3)
+
+                Text("Genuine")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .position(x: 35, y: h * 0.7)
+
+                ForEach(samples) { sample in
+                    let cx = xPos(sample.centroidSimilarity, width: w)
+                    let cy = sample.isGenuine ? h * 0.7 : h * 0.3
+                    Circle()
+                        .fill(sample.isGenuine ? Color.green : Color.red)
+                        .frame(width: 8, height: 8)
+                        .position(x: cx, y: cy)
+                }
+
+                let tx = xPos(Float(threshold), width: w)
+                Path { p in
+                    p.move(to: CGPoint(x: tx, y: 0))
+                    p.addLine(to: CGPoint(x: tx, y: h))
+                }
+                .stroke(Color.blue, style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
+            }
+        }
+        .frame(height: 100)
+    }
 }
+
+struct FaceLabView_Previews: PreviewProvider {
+    static var previews: some View {
+        FaceLabView(controller: FaceLabController())
+    }
+}
+

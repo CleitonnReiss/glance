@@ -30,11 +30,11 @@ struct HeaderTrailingActionKey: PreferenceKey {
     }
 }
 
+@MainActor
 struct SettingsWindowView: View {
-    let environment: AppEnvironment
+    @ObservedObject var environment: AppEnvironment
     @State private var selection: SettingsTab = .general
     @State private var headerTrailingAction: HeaderAction?
-    @Environment(\.dismissWindow) private var dismissWindow
 
     /// Defense-in-depth, not the primary gate: Settings is `.suppressed` at
     /// launch and `AppDelegate.revealSettingsWindow()` refuses to open it
@@ -45,7 +45,6 @@ struct SettingsWindowView: View {
             settingsContent
         } else {
             Color.clear
-                .onAppear { dismissWindow(id: "settings") }
         }
     }
 
@@ -119,7 +118,7 @@ struct SettingsWindowView: View {
 
             if let headerTrailingAction {
                 Button(action: headerTrailingAction.perform) {
-                    Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
+                    Image(systemName: "arrow.clockwise")
                         .font(.system(size: 13))
                         .foregroundStyle(SettingsMetrics.textPrimary)
                         .frame(width: SettingsMetrics.headerButtonHeight, height: SettingsMetrics.headerButtonHeight)

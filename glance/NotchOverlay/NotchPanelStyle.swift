@@ -15,6 +15,13 @@ enum NotchPanelStyle {
     case pill
 }
 
+private struct NotchPanelStyleKey: EnvironmentKey {
+    static let defaultValue: NotchPanelStyle = .notch
+}
+
 extension EnvironmentValues {
-    @Entry var notchPanelStyle: NotchPanelStyle = .notch
+    var notchPanelStyle: NotchPanelStyle {
+        get { self[NotchPanelStyleKey.self] }
+        set { self[NotchPanelStyleKey.self] = newValue }
+    }
 }

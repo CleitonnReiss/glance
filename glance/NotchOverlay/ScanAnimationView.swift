@@ -109,7 +109,7 @@ final class ScanAnimationHostView: NSView {
         // Waits for `isReadyForDisplay` rather than a fixed delay, which raced the
         // real decode time and produced a black-frame flash.
         let reveal: () -> Void = { [weak self] in
-            guard let self else { return }
+            guard let self = self else { return }
             // Without disabling implicit actions, toggling `isHidden` cross-fades both
             // layers over CALayer's default duration instead of swapping instantly.
             CATransaction.begin()

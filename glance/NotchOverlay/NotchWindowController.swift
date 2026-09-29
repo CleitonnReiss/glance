@@ -140,7 +140,9 @@ final class NotchWindowController {
         let shouldPoll = wantsInteractive && (window?.isVisible ?? false)
         if shouldPoll, cursorPollTimer == nil {
             let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-                MainActor.assumeIsolated { self?.updateMousePassthrough() }
+                Task { @MainActor [weak self] in
+                    self?.updateMousePassthrough()
+                }
             }
             RunLoop.main.add(timer, forMode: .common)
             cursorPollTimer = timer

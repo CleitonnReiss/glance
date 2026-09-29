@@ -6,9 +6,9 @@
 import SwiftUI
 
 struct RecognitionSettingsPage: View {
-    @Bindable var coordinator: FaceUnlockCoordinator
-    @Bindable var pocController: POCController
-    @Bindable private var settings = GlanceSettings.shared
+    @ObservedObject var coordinator: FaceUnlockCoordinator
+    @ObservedObject var pocController: POCController
+    @ObservedObject private var settings = GlanceSettings.shared
 
     @State private var isUnlocking = false
     @State private var sessionError: String?
@@ -33,7 +33,7 @@ struct RecognitionSettingsPage: View {
         .onAppear { pocController.refreshCredentialStatus() }
         // Password/name/enrollment flows run in the notch, outside this
         // window, so nothing else prompts a re-check once one closes.
-        .onChange(of: NotchOverlayController.shared.phase) { _, newPhase in
+        .onChange(of: NotchOverlayController.shared.phase) { newPhase in
             guard newPhase == .closed else { return }
             pocController.refreshCredentialStatus()
         }

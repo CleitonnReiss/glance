@@ -7,8 +7,8 @@ import OSLog
 import SwiftUI
 
 struct GeneralSettingsPage: View {
-    @Bindable var coordinator: FaceUnlockCoordinator
-    @Bindable private var settings = GlanceSettings.shared
+    @ObservedObject var coordinator: FaceUnlockCoordinator
+    @ObservedObject private var settings = GlanceSettings.shared
 
     @State private var launchAtLoginEnabled = LaunchAtLogin.isEnabled
     @State private var launchAtLoginError: String?
@@ -18,6 +18,7 @@ struct GeneralSettingsPage: View {
     /// Refreshed when the app regains focus, so granting the permission in
     /// System Settings clears the prompt below without a relaunch.
     @State private var inputMonitoring = SpaceKeyMonitor.inputMonitoringAccess
+    @State private var previousTriggers: Set<UnlockTrigger> = GlanceSettings.shared.unlockTriggers
 
     private var needsInputMonitoring: Bool {
         settings.unlockTriggers.contains(.onSpace) && inputMonitoring != .granted
@@ -61,7 +62,9 @@ struct GeneralSettingsPage: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             inputMonitoring = SpaceKeyMonitor.inputMonitoringAccess
         }
-        .onChange(of: settings.unlockTriggers) { oldValue, newValue in
+        .onChange(of: settings.unlockTriggers) { newValue in
+            let oldValue = previousTriggers
+            previousTriggers = newValue
             // Only prompt on the transition into selecting "On space".
             SpaceKeyMonitor.log.info("unlockTriggers changed: old=\(String(describing: oldValue), privacy: .public) new=\(String(describing: newValue), privacy: .public) state=\(String(describing: inputMonitoring), privacy: .public)")
             if newValue.contains(.onSpace), !oldValue.contains(.onSpace), inputMonitoring != .granted {

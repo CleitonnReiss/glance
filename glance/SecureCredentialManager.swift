@@ -48,10 +48,10 @@ enum SecureCredentialManager {
     // MARK: - Session state (thread-safe via NSLock)
 
     nonisolated private static let sessionLock = NSLock()
-    nonisolated(unsafe) private static var _cachedKey: SymmetricKey?
+    private static var _cachedKey: SymmetricKey?
     /// Last unlock or successful `readPassword` — what `SessionAutoLocker` compares against the idle limit. Guarded by
     /// `sessionLock` alongside the key so the two can never be observed out of step.
-    nonisolated(unsafe) private static var _lastActivityAt: Date?
+    private static var _lastActivityAt: Date?
 
     nonisolated static var isSessionUnlocked: Bool {
         sessionLock.lock(); defer { sessionLock.unlock() }

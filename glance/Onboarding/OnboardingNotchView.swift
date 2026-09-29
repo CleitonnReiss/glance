@@ -8,8 +8,9 @@
 
 import SwiftUI
 
+@MainActor
 struct OnboardingNotchView: View {
-    let controller: OnboardingController
+    @ObservedObject var controller: OnboardingController
 
     var body: some View {
         ZStack {

@@ -143,9 +143,8 @@ struct SettingsMenuPickerPill<MenuContent: View>: View {
         }
         // `.button` + `.plain` renders the label as ordinary SwiftUI
         // content, so the capsule chrome and padding above are honored.
-        .menuStyle(.button)
+        .menuStyle(BorderlessButtonMenuStyle())
         .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .fixedSize()
         // Window-level accent tint otherwise paints the menu label blue.
         .tint(SettingsMetrics.textPrimary)
@@ -688,7 +687,7 @@ struct UnlockAnimationPicker: View {
     var isEnabled: Bool = true
 
     /// How long the live preview holds on the success animation before collapsing.
-    private static let previewHoldDuration: Duration = .seconds(1.5)
+    private static let previewHoldDuration: TimeInterval = 1.5
 
     var body: some View {
         SettingsLabeledOptionRow(
@@ -713,11 +712,12 @@ struct UnlockAnimationPicker: View {
 
     /// Picks the tile (a re-tap replays the preview too) and plays that
     /// style's real animation on the notch/pill via `styleOverride`.
+    @MainActor
     private func selectAndPreview(_ style: UnlockAnimationStyle) {
         selection = style
         NotchOverlayController.shared.present(styleOverride: style)
-        Task {
-            try? await Task.sleep(for: Self.previewHoldDuration)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(Self.previewHoldDuration * 1_000_000_000))
             NotchOverlayController.shared.finish(success: true)
         }
     }

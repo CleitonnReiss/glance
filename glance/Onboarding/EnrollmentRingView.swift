@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct EnrollmentRingView: View {
-    let controller: OnboardingController
+    @ObservedObject var controller: OnboardingController
 
     @State private var pulseActive = false
 
@@ -57,7 +57,7 @@ struct EnrollmentRingView: View {
                 .animation(.easeInOut(duration: 0.45), value: isComplete)
         }
         .frame(width: diameter, height: diameter)
-        .onChange(of: controller.centerPulseTick) { _, _ in
+        .onChange(of: controller.centerPulseTick) { _ in
             triggerPulse()
         }
     }
@@ -111,7 +111,7 @@ struct EnrollmentRingView: View {
     private func triggerPulse() {
         Task {
             pulseActive = true
-            try? await Task.sleep(for: .milliseconds(220))
+            try? await Task.sleep(nanoseconds: 220_000_000)
             pulseActive = false
         }
     }

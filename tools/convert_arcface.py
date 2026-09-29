@@ -61,6 +61,10 @@ def locate_or_download_onnx(variant: str, explicit_path: str | None) -> Path:
             fail(f"--onnx-path does not exist: {path}")
         return path
 
+    tmp_path = Path("/tmp/buffalo_s/w600k_mbf.onnx")
+    if tmp_path.is_file():
+        return tmp_path
+
     try:
         from insightface.app import FaceAnalysis
     except ImportError:
@@ -119,9 +123,9 @@ def convert_to_coreml(onnx_path: Path, output_path: Path) -> None:
                 color_layout=ct.colorlayout.RGB,
             )
         ],
-        outputs=[ct.TensorType(name="embedding")],
-        minimum_deployment_target=ct.target.macOS14,
-        compute_precision=ct.precision.FLOAT16,
+        outputs=[ct.TensorType(name="embedding", dtype=np.float32)],
+        minimum_deployment_target=ct.target.iOS15,
+        compute_precision=ct.precision.FLOAT32,
         compute_units=ct.ComputeUnit.ALL,
     )
 

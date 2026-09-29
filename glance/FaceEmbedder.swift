@@ -38,11 +38,11 @@ enum FaceEmbedderError: LocalizedError {
 }
 
 struct VisionFeaturePrintEmbedder: FaceEmbedder {
-    nonisolated let name = "Vision Feature Print"
-    nonisolated let modelIdentifier = "vision-feature-print-v1"
+    let name = "Vision Feature Print"
+    let modelIdentifier = "vision-feature-print-v1"
     // Nominal hint only — `modelIdentifier` is the real discriminator `SecureFaceStore` relies on.
-    nonisolated let embeddingDimension = 2048
-    nonisolated let requiresAlignment = false
+    let embeddingDimension = 2048
+    let requiresAlignment = false
 
     nonisolated func embedding(for face: CGImage) throws -> [Float] {
         let request = VNGenerateImageFeaturePrintRequest()
@@ -79,7 +79,7 @@ struct VisionFeaturePrintEmbedder: FaceEmbedder {
     }
 }
 
-nonisolated enum FaceEmbedding {
+enum FaceEmbedding {
     /// Scales `vector` to unit length; matters once vectors are combined (see `average` below).
     static func l2Normalized(_ vector: [Float]) -> [Float] {
         let norm = sqrt(vector.reduce(Float(0)) { $0 + $1 * $1 })

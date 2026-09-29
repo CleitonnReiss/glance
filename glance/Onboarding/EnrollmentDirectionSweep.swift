@@ -340,33 +340,7 @@ private struct SweepStreak: View {
 
 // MARK: - Previews
 
-#Preview("All directions") {
-    let columns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-    ]
-    LazyVGrid(columns: columns, spacing: 8) {
-        ForEach(EnrollmentSweepDirection.allCases, id: \.self) { direction in
-            ZStack(alignment: .topLeading) {
-                Color.black
-                EnrollmentDirectionSweep(direction: direction)
-                Text(direction.previewLabel)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(8)
-            }
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        }
-    }
-    .padding(12)
-    .frame(width: 920, height: 360)
-    .background(Color.black)
-}
-
-#Preview("Cycling") {
+struct EnrollmentDirectionSweep_Previews: PreviewProvider {
     struct CyclingSweepPreview: View {
         @State private var index = 0
         private let directions = EnrollmentSweepDirection.allCases
@@ -386,12 +360,43 @@ private struct SweepStreak: View {
             .frame(width: 900, height: 560)
             .task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(4.2))
+                    try? await Task.sleep(nanoseconds: 4_200_000_000)
                     index = (index + 1) % directions.count
                 }
             }
         }
     }
 
-    return CyclingSweepPreview()
+    static var previews: some View {
+        let columns = [
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8),
+        ]
+        return Group {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(EnrollmentSweepDirection.allCases, id: \.self) { direction in
+                    ZStack(alignment: .topLeading) {
+                        Color.black
+                        EnrollmentDirectionSweep(direction: direction)
+                        Text(direction.previewLabel)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .padding(8)
+                    }
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+            .padding(12)
+            .frame(width: 920, height: 360)
+            .background(Color.black)
+            .previewDisplayName("All directions")
+
+            CyclingSweepPreview()
+                .previewDisplayName("Cycling")
+        }
+    }
 }
+

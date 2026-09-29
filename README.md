@@ -10,9 +10,13 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-black.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/macOS-15%2B-black.svg" alt="macOS 15+">
+  <img src="https://img.shields.io/badge/macOS-12%2B%20Monterey-blue.svg" alt="macOS 12+ Monterey">
   <img src="https://img.shields.io/badge/Swift-SwiftUI-black.svg" alt="Swift">
 </p>
+
+> [!NOTE]
+> **Fork com Suporte ao macOS Monterey (12.0+)**: Esta versão foi reformulada para rodar nativamente a partir do macOS Monterey em Macs Intel e Apple Silicon. Veja todos os detalhes técnicos e guia de compilação em [MONTEREY.md](MONTEREY.md).
+
 
 Glance brings the FaceID-like experience of your iPhone to a Mac near you. Unlock your Mac with a glance — no typing, no reaching for the TouchID key. Everything runs on-device using Apple's Vision
 and Core ML frameworks, so your face data and your Mac password never touch the internet. The UI is built into your Macbook's notch with fluid dynamic island like animations.

@@ -6,11 +6,10 @@
 //
 
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class AppEnvironment {
+final class AppEnvironment: ObservableObject {
     let pocController = POCController()
     let faceLabController = FaceLabController()
     let faceUnlockCoordinator: FaceUnlockCoordinator
@@ -20,7 +19,7 @@ final class AppEnvironment {
     let updater = UpdaterController()
 
     /// Revealed by tapping the app icon 5 times on the About page. Plain in-memory `var` so it resets on every relaunch.
-    var isDebugSectionRevealed = false
+    @Published var isDebugSectionRevealed = false
 
     init() {
         faceUnlockCoordinator = FaceUnlockCoordinator(pocController: pocController)

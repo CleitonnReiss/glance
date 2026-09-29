@@ -7,7 +7,7 @@
 
 @preconcurrency import AVFoundation
 import CoreImage
-import Observation
+import Combine
 
 enum CameraPermission {
     case notDetermined
@@ -23,13 +23,13 @@ struct CameraFrame {
     let sourceSize: CGSize
 }
 
-@Observable
 @MainActor
-final class CameraManager: NSObject {
-    private(set) var permission: CameraPermission = .notDetermined
-    private(set) var isRunning: Bool = false
-    private(set) var currentFrame: CameraFrame?
-    private(set) var errorMessage: String?
+final class CameraManager: NSObject, ObservableObject {
+    @Published private(set) var permission: CameraPermission = .notDetermined
+    @Published private(set) var isRunning: Bool = false
+    @Published private(set) var currentFrame: CameraFrame?
+    @Published private(set) var errorMessage: String?
+    var onFrame: ((CameraFrame) -> Void)?
 
     /// Exposed read-only so `CameraPreviewView` can attach a preview layer to the same session.
     let session = AVCaptureSession()
@@ -161,6 +161,7 @@ final class CameraManager: NSObject {
 
     fileprivate func publish(frame: CameraFrame) {
         currentFrame = frame
+        onFrame?(frame)
     }
 
     /// Renders a native-resolution crop of `imageRect` from `frame.source`, for spoof-cue extraction which

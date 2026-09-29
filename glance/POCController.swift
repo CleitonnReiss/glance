@@ -7,21 +7,20 @@
 //
 
 import Foundation
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class POCController {
-    var accessibilityGranted: Bool = KeystrokeInjector.isAccessibilityTrusted()
+final class POCController: ObservableObject {
+    @Published var accessibilityGranted: Bool = KeystrokeInjector.isAccessibilityTrusted()
 
-    var hasStoredPassword: Bool = SecureCredentialManager.hasStoredPassword()
-    var isSessionUnlocked: Bool = SecureCredentialManager.isSessionUnlocked
-    var sessionError: String? = nil
+    @Published var hasStoredPassword: Bool = SecureCredentialManager.hasStoredPassword()
+    @Published var isSessionUnlocked: Bool = SecureCredentialManager.isSessionUnlocked
+    @Published var sessionError: String? = nil
 
     /// Bound to the setup SecureField. Cleared immediately after a successful save.
-    var passwordInput: String = ""
+    @Published var passwordInput: String = ""
 
-    var statusMessage: String = "Idle"
+    @Published var statusMessage: String = "Idle"
 
     func refreshAccessibilityStatus() {
         accessibilityGranted = KeystrokeInjector.isAccessibilityTrusted()
@@ -90,24 +89,29 @@ final class POCController {
     /// buffer before returning. When `requireAuthoritativeLock` is true (the
     /// auto-trigger path), refuses to inject unless the CGSession dictionary
     /// confirms the screen is actually locked.
-    func injectStoredPassword(requireAuthoritativeLock: Bool = false) async {
+    @discardableResult
+    func injectStoredPassword(requireAuthoritativeLock: Bool = false) async -> Bool {
         guard KeystrokeInjector.isAccessibilityTrusted() else {
-            statusMessage = "Accessibility not granted — open System Settings and enable glance."
-            return
+            statusMessage = "Accessibility permission required — open System Settings → Security & Privacy → Accessibility and enable Glance."
+            print("Glance: [injectStoredPassword] FAILED: Accessibility not granted (AXIsProcessTrusted is false)")
+            return false
         }
         guard SecureCredentialManager.isSessionUnlocked else {
-            statusMessage = "Session locked — authenticate with Touch ID first."
-            return
+            statusMessage = "Session locked — unlock in Glance menu first."
+            print("Glance: [injectStoredPassword] FAILED: Credential session is locked")
+            return false
         }
 
         if requireAuthoritativeLock {
             guard LockMonitor.isScreenActuallyLocked() else {
                 statusMessage = "Skipped: CGSession reports screen is not actually locked."
-                return
+                print("Glance: [injectStoredPassword] SKIPPED: Screen is not reported locked by CGSession")
+                return false
             }
         }
 
         statusMessage = "Injecting…"
+        print("Glance: [injectStoredPassword] Starting password injection...")
         do {
             try await Task.detached(priority: .userInitiated) {
                 var bytes = try SecureCredentialManager.readPassword()
@@ -115,8 +119,12 @@ final class POCController {
                 try KeystrokeInjector.typeAndReturn(bytes)
             }.value
             statusMessage = "Injected stored password + Return at \(Date().formatted(date: .omitted, time: .standard))"
+            print("Glance: [injectStoredPassword] SUCCESS: Injected password + Return successfully")
+            return true
         } catch {
             statusMessage = "Injection failed: \(error.localizedDescription)"
+            print("Glance: [injectStoredPassword] FAILED with error: \(error.localizedDescription)")
+            return false
         }
     }
 }

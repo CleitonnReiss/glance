@@ -9,18 +9,17 @@
 
 import Foundation
 import CoreGraphics
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class FaceUnlockCoordinator {
+final class FaceUnlockCoordinator: ObservableObject {
     private let pocController: POCController
     let lockMonitor = LockMonitor()
     let camera = CameraManager()
     let pipeline = FaceRecognitionPipeline()
 
     /// Persisted via GlanceSettings. Setting to false cancels any in-flight scan and disarms the overlay immediately.
-    var isEnabled: Bool {
+    @Published var isEnabled: Bool {
         didSet {
             GlanceSettings.shared.isFaceUnlockEnabled = isEnabled
             if !isEnabled { disarmOverlay() }
@@ -28,7 +27,7 @@ final class FaceUnlockCoordinator {
     }
 
     /// Kept independent from Face Lab's own `threshold` so tuning the debug tool never silently changes the real unlock gate.
-    var matchThreshold: Float {
+    @Published var matchThreshold: Float {
         didSet { GlanceSettings.shared.matchThreshold = matchThreshold }
     }
     /// Shares its setting with NotchOverlayController's scanning timeout, so the background loop stops in step with the UI collapsing.
@@ -38,8 +37,8 @@ final class FaceUnlockCoordinator {
     /// Requires several consecutive below-threshold frames so a single bad-angle read doesn't trigger the failure animation.
     private let wrongFaceStreakThreshold = 6
 
-    private(set) var statusMessage = "Idle"
-    private(set) var lastOutcome: String?
+    @Published private(set) var statusMessage = "Idle"
+    @Published private(set) var lastOutcome: String?
 
     private var hasArmedForCurrentLock = false
     /// One-shot per lock session — an auto-retry that could itself auto-retry would loop the camera for the whole lock session.
@@ -48,13 +47,13 @@ final class FaceUnlockCoordinator {
     /// Bumped by every `startScanCycle()`; a cycle bails once superseded (see `runScanCycle(generation:)`).
     private var scanGeneration = 0
     /// When the last scan cycle was armed — collapses a single wake into a single arm (see `.wake` branch of `evaluateTrigger`).
-    private var lastArmedAt: ContinuousClock.Instant?
+    private var lastArmedAt: TimeInterval?
     /// One lid-open fires several wake signals within a few hundred ms of each other; anything in this window counts as the same wake.
-    private let rearmDebounce: Duration = .seconds(2)
+    private let rearmDebounce: TimeInterval = 2.0
     /// Held separately from `scanTask` since it's scheduled from inside the scan task it follows — reusing `scanTask` would self-cancel it.
     private var autoRetryTask: Task<Void, Never>?
     /// Gap between headless auto-retries, just to keep the camera from restarting in a tight loop.
-    private let headlessRetryDelay: Duration = .seconds(1)
+    private let headlessRetryDelay: TimeInterval = 1.0
 
     /// When off, no notch/pill presence at all — every overlay call in this file is conditioned on this rather than just skipping the video.
     private var showsUI: Bool { GlanceSettings.shared.showUnlockAnimation }
@@ -72,15 +71,8 @@ final class FaceUnlockCoordinator {
 
     /// Re-subscribes on every change — `withObservationTracking` only fires once per registration.
     private func observeLockAndWakeEvents() {
-        withObservationTracking {
-            _ = lockMonitor.isScreenLocked
-            _ = lockMonitor.wakeEventCount
-            _ = lockMonitor.isSleeping
-            // Also tracked so screensaver-stop and display-only wakes still wake this up.
-            _ = lockMonitor.eventCount
-        } onChange: { [weak self] in
+        lockMonitor.onEvent = { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.observeLockAndWakeEvents()
                 // Brief settle delay: CGSession's reported state can lag the true state right after wake.
                 try? await Task.sleep(nanoseconds: 300_000_000)
                 self?.evaluateTrigger()
@@ -119,6 +111,10 @@ final class FaceUnlockCoordinator {
             statusMessage = "Face unlock is on, but no password is stored yet."
             return
         }
+        guard KeystrokeInjector.isAccessibilityTrusted() else {
+            statusMessage = "Face unlock is on, but Accessibility is not granted — enable Glance in System Preferences."
+            return
+        }
 
         // A deselected trigger means "don't auto-scan for this signal," not "do nothing" — the user can still opt in by hand.
         let shouldAutoScan = GlanceSettings.shared.unlockTriggers.contains(signal)
@@ -128,7 +124,7 @@ final class FaceUnlockCoordinator {
         guard showsUI || shouldAutoScan else { return }
 
         hasArmedForCurrentLock = true
-        lastArmedAt = .now
+        lastArmedAt = ProcessInfo.processInfo.systemUptime
         Task { [weak self] in
             // arm() only shows a small closed notch silhouette, so this only needs a brief buffer past the login window's entrance.
             try? await Task.sleep(nanoseconds: 250_000_000)
@@ -139,7 +135,7 @@ final class FaceUnlockCoordinator {
     /// Whether the last arm was recent enough to be part of the same wake burst rather than a new one.
     private var isWithinRecentArmBurst: Bool {
         guard let lastArmedAt else { return false }
-        return ContinuousClock.now - lastArmedAt < rearmDebounce
+        return ProcessInfo.processInfo.systemUptime - lastArmedAt < rearmDebounce
     }
 
     /// nil for signals that shouldn't arm anything — including a nil `lastEvent`, or the first observation would fire regardless of user selection.
@@ -184,7 +180,8 @@ final class FaceUnlockCoordinator {
               LockMonitor.isScreenActuallyLocked(),
               NotchGeometry.preferredScreen() != nil,
               SecureCredentialManager.isSessionUnlocked,
-              SecureCredentialManager.hasStoredPassword()
+              SecureCredentialManager.hasStoredPassword(),
+              KeystrokeInjector.isAccessibilityTrusted()
         else { return }
 
         // Already looking — swallows auto-repeat/double-presses and lets "On wake"/"On lock" override "On space" with no special-casing.
@@ -267,6 +264,14 @@ final class FaceUnlockCoordinator {
             if showsUI {
                 NotchOverlayController.shared.finish(success: true)
             }
+        case .injectionFailed(let message):
+            statusMessage = message
+            if showsUI {
+                NotchOverlayController.shared.finish(success: false)
+                scheduleAutoRetryIfEnabled(after: NotchOverlayController.shared.failureHoldDuration)
+            } else {
+                scheduleAutoRetryIfEnabled(after: headlessRetryDelay)
+            }
         case .consistentlyWrongFace:
             statusMessage = "Face not recognized."
             if showsUI {
@@ -298,12 +303,12 @@ final class FaceUnlockCoordinator {
     }
 
     /// `delay` waits out whatever the overlay is still showing so the retry doesn't start underneath the previous outcome.
-    private func scheduleAutoRetryIfEnabled(after delay: Duration) {
+    private func scheduleAutoRetryIfEnabled(after delay: TimeInterval) {
         guard GlanceSettings.shared.autoRetryOnce, !hasAutoRetriedForCurrentLock else { return }
         hasAutoRetriedForCurrentLock = true
         autoRetryTask?.cancel()
         autoRetryTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard !Task.isCancelled, let self else { return }
             // Re-check rather than trust the delay: the user may have unlocked by password or retried manually while this waited.
             guard LockMonitor.isScreenActuallyLocked(), self.isEnabled else { return }
@@ -320,6 +325,7 @@ final class FaceUnlockCoordinator {
         /// A deny cue (glare, device rectangle) fired — actively rejected as a spoof regardless of match. Same failure path as `.consistentlyWrongFace`.
         case spoofSuspected
         case noResolution
+        case injectionFailed(String)
     }
 
     /// Recognition and liveness run concurrently and each latches when it succeeds, so unlock fires the moment the second lands;
@@ -405,9 +411,16 @@ final class FaceUnlockCoordinator {
                 let livenessNote = livenessEnabled
                     ? (confirmingCue.map { "live via \($0.title)" } ?? "liveness clear")
                     : "liveness off"
-                lastOutcome = "Matched \(readyMatch.identity.name) at \(String(format: "%.3f", readyMatch.centroidSimilarity)), \(livenessNote)."
-                await pocController.injectStoredPassword(requireAuthoritativeLock: true)
-                return .matched
+                let injected = await pocController.injectStoredPassword(requireAuthoritativeLock: true)
+                if injected {
+                    lastOutcome = "Matched \(readyMatch.identity.name) at \(String(format: "%.3f", readyMatch.centroidSimilarity)), \(livenessNote)."
+                    return .matched
+                } else {
+                    let msg = pocController.statusMessage
+                    lastOutcome = "Matched \(readyMatch.identity.name), but unlock failed: \(msg)"
+                    statusMessage = msg
+                    return .injectionFailed(msg)
+                }
             }
 
             try? await Task.sleep(nanoseconds: 20_000_000)

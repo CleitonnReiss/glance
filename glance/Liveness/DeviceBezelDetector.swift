@@ -16,10 +16,10 @@ struct DeviceBezelObservation {
     /// Fraction of the face's bounding box area that falls inside `rectangle`.
     let faceOverlapFraction: CGFloat?
 
-    nonisolated static let none = DeviceBezelObservation(rectangle: nil, faceOverlapFraction: nil)
+    static let none = DeviceBezelObservation(rectangle: nil, faceOverlapFraction: nil)
 }
 
-nonisolated enum DeviceBezelDetector {
+enum DeviceBezelDetector {
     /// First-pass estimates, not validated against real footage — tune here if false positives/negatives show up.
     private static func makeRequest() -> VNDetectRectanglesRequest {
         let request = VNDetectRectanglesRequest()

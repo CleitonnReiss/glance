@@ -8,10 +8,9 @@
 import Foundation
 import AppKit
 import CoreGraphics
-import Observation
+import Combine
 
-/// Which signal most recently fired — `withObservationTracking`'s `onChange` doesn't say which property changed, so observers
-/// read this alongside the monotonic `eventCount` to tell events apart.
+/// Which signal most recently fired — observers read this alongside `eventCount` or via `onEvent`.
 enum LockEventKind {
     case screenLocked
     case screenUnlocked
@@ -20,24 +19,25 @@ enum LockEventKind {
     case wake
 }
 
-@Observable
-final class LockMonitor {
+final class LockMonitor: ObservableObject {
     /// NOT trustworthy alone: any same-user process can post these distributed notifications, and this process can be
     /// suspended before one is delivered (e.g. lid-close sleep racing a lock). UI/trigger signal only, never a security gate.
-    private(set) var isScreenLocked: Bool = false
+    @Published private(set) var isScreenLocked: Bool = false
 
     /// Catches the case above: lock may have already happened while suspended, so wake is the first chance to notice — callers
     /// should re-derive lock state via `isScreenActuallyLocked()` on change rather than trust `isScreenLocked`.
-    private(set) var wakeEventCount: Int = 0
+    @Published private(set) var wakeEventCount: Int = 0
 
     /// True from `willSleepNotification` until the next wake. `screenIsLocked` fires ~150ms before the system actually finishes
     /// suspending (measured via pmset/os_log correlation), so callers should skip acting on a lock while this is true and wait
     /// for the wake trigger instead.
-    private(set) var isSleeping: Bool = false
+    @Published private(set) var isSleeping: Bool = false
 
     /// Observers track `eventCount` (changes on every event, even repeats of the same kind) then read `lastEvent`.
-    private(set) var lastEvent: LockEventKind?
-    private(set) var eventCount: Int = 0
+    @Published private(set) var lastEvent: LockEventKind?
+    @Published private(set) var eventCount: Int = 0
+
+    var onEvent: ((LockEventKind) -> Void)?
 
     private var distributedObservers: [NSObjectProtocol] = []
     private var workspaceObservers: [NSObjectProtocol] = []
@@ -120,6 +120,7 @@ final class LockMonitor {
     private func record(_ kind: LockEventKind) {
         lastEvent = kind
         eventCount += 1
+        onEvent?(kind)
     }
 
     /// Authoritative lock state from the CoreGraphics session server, not a spoofable notification. Fails closed if unavailable.

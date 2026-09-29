@@ -32,11 +32,11 @@ enum ArcFaceEmbedderError: LocalizedError {
     }
 }
 
-nonisolated final class ArcFaceEmbedder: FaceEmbedder, @unchecked Sendable {
-    nonisolated let name = "ArcFace (w600k_mbf)"
-    nonisolated let modelIdentifier = "arcface-w600k_mbf-v1"
-    nonisolated let embeddingDimension = 512
-    nonisolated let requiresAlignment = true
+final class ArcFaceEmbedder: FaceEmbedder, @unchecked Sendable {
+    let name = "ArcFace (w600k_mbf)"
+    let modelIdentifier = "arcface-w600k_mbf-v1"
+    let embeddingDimension = 512
+    let requiresAlignment = true
 
     private static let inputSize = FaceAligner.outputSize
     private static let inputName = "input_image"
@@ -72,6 +72,11 @@ nonisolated final class ArcFaceEmbedder: FaceEmbedder, @unchecked Sendable {
         for name in ["ArcFace", "w600k_mbf"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "mlmodelc") {
                 return url
+            }
+            if let url = Bundle.main.url(forResource: name, withExtension: "mlpackage") {
+                if let compiled = try? MLModel.compileModel(at: url) {
+                    return compiled
+                }
             }
         }
         return nil

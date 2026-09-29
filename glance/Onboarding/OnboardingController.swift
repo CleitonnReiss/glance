@@ -11,7 +11,6 @@
 //
 
 import Foundation
-import Observation
 import AVFoundation
 import AppKit
 import SwiftUI
@@ -142,9 +141,8 @@ enum CameraPermissionState {
     case denied
 }
 
-@Observable
 @MainActor
-final class OnboardingController {
+final class OnboardingController: ObservableObject {
     let camera = CameraManager()
     let pipeline = FaceRecognitionPipeline()
     private let store = FaceEnrollmentStore.shared
@@ -153,7 +151,7 @@ final class OnboardingController {
     /// Persists the resume point for a true first-run flow on every step change, so
     /// `AppDelegate` can drop a relaunched, mid-onboarding user back where they left off.
     /// Settings-triggered flows never touch this.
-    private(set) var step: OnboardingStep = .intro {
+    @Published private(set) var step: OnboardingStep = .intro {
         didSet {
             guard isFirstRunFlow else { return }
             if step == .complete {
@@ -221,7 +219,7 @@ final class OnboardingController {
     enum NavDirection { case forward, backward }
     /// Which way the step just changed — read by OnboardingNotchView to
     /// pick the scroll direction for the blur transition.
-    private(set) var navDirection: NavDirection = .forward
+    @Published private(set) var navDirection: NavDirection = .forward
 
     /// Entry point used by Face Lab's "Start Onboarding" button, and by `AppDelegate` at
     /// first launch and whenever the user tries to reach Settings before onboarding is done.
@@ -336,8 +334,8 @@ final class OnboardingController {
 
     // MARK: - Permissions
 
-    private(set) var accessibilityGranted = false
-    private(set) var cameraPermission: CameraPermissionState = .notDetermined
+    @Published private(set) var accessibilityGranted = false
+    @Published private(set) var cameraPermission: CameraPermissionState = .notDetermined
     var bothPermissionsGranted: Bool { accessibilityGranted && cameraPermission == .granted }
 
     private var permissionsPollTask: Task<Void, Never>?
@@ -351,13 +349,13 @@ final class OnboardingController {
     private let requiredMatchStreak = 3
     /// Wait this long after yaw/pitch matches before samples count, so the user has
     /// settled into the turn rather than being captured mid-motion.
-    private let poseHoldDuration: Duration = .milliseconds(500)
+    private let poseHoldDuration: TimeInterval = 0.5
     /// Permissive floor for Vision's capture-quality score (no fixed universal cutoff) —
     /// better to accept a mediocre sample than stall the whole flow.
     private let qualityFloor: Float = 0.2
     /// Hold off accepting captures this long once the camera comes up, so the first
     /// samples aren't taken mid-blink. Detection still runs during this window.
-    private let initialCaptureDelay: Duration = .seconds(1.5)
+    private let initialCaptureDelay: TimeInterval = 1.5
     /// Enrollment wants a closer face than unlock's bystander cutoff — sitting back in a
     /// chair is still enough to unlock, but too far for a reliable template.
     private var enrollmentMinimumFaceWidth: Float {
@@ -374,35 +372,35 @@ final class OnboardingController {
     private let pitchOuterCap: Float = 0.9
     /// If a pose takes longer than this, matching bands widen by `stallWidenFactor` so an
     /// unusual camera angle can't permanently strand the user.
-    private let stallTimeout: Duration = .seconds(12)
+    private let stallTimeout: TimeInterval = 12.0
     private let stallWidenFactor: Float = 1.25
 
-    private(set) var currentPoseIndex = 0
-    private(set) var capturedForCurrentPose = 0
-    private(set) var faceDetected = false
-    private(set) var currentYaw: Float?
-    private(set) var currentPitch: Float?
+    @Published private(set) var currentPoseIndex = 0
+    @Published private(set) var capturedForCurrentPose = 0
+    @Published private(set) var faceDetected = false
+    @Published private(set) var currentYaw: Float?
+    @Published private(set) var currentPitch: Float?
     /// Whether the last-seen face read as too small to enroll reliably — swaps the pose
     /// instruction for a "move closer" prompt while true.
-    private(set) var isTooFar = false
-    private(set) var enrollmentComplete = false
+    @Published private(set) var isTooFar = false
+    @Published private(set) var enrollmentComplete = false
 
     /// Sectors already captured — read by EnrollmentRingView to decide which
     /// ticks are lit.
-    private(set) var capturedPoses: Set<EnrollmentPose> = []
+    @Published private(set) var capturedPoses: Set<EnrollmentPose> = []
     /// Bumped every time `.center` is captured; EnrollmentRingView observes
     /// this to trigger the whole-ring pulse (center has no sector of its
     /// own to light).
-    private(set) var centerPulseTick = 0
+    @Published private(set) var centerPulseTick = 0
 
     /// Whether pose instructions should be visible in the enroll panel —
     /// false once enrollment completes, ahead of the checkmark sequence.
-    private(set) var guideVisible = false
+    @Published private(set) var guideVisible = false
     /// Whether the camera preview should be visible — faded out as part of
     /// the camera-complete sequence.
-    private(set) var cameraPreviewVisible = true
+    @Published private(set) var cameraPreviewVisible = true
     /// Whether the completion checkmark should be drawing/shown.
-    private(set) var showCheckmark = false
+    @Published private(set) var showCheckmark = false
 
     private struct CollectedSample {
         let embedding: [Float]
@@ -418,13 +416,13 @@ final class OnboardingController {
     private var collectedSamples: [CollectedSample] = []
     private var matchStreak = 0
     private var isProcessingFrame = false
-    private var poseStartedAt: ContinuousClock.Instant = .now
+    private var poseStartedAt: TimeInterval = ProcessInfo.processInfo.systemUptime
     /// Set once in `beginEnrollment()` — not per-pose — so it only holds back the first
     /// pose rather than pausing again after every later pose change.
-    private var captureReadyAt: ContinuousClock.Instant = .now
+    private var captureReadyAt: TimeInterval = ProcessInfo.processInfo.systemUptime
     /// When the current pose first started matching continuously; `nil` while out of band.
     /// Capture waits `poseHoldDuration` past this instant.
-    private var poseHoldStartedAt: ContinuousClock.Instant?
+    private var poseHoldStartedAt: TimeInterval?
 
     var currentPose: EnrollmentPose? {
         EnrollmentPose(rawValue: currentPoseIndex)
@@ -482,8 +480,8 @@ final class OnboardingController {
     // MARK: - Naming
 
     /// Bound directly by `NameStepView`; pre-filled by whichever entry point started the flow.
-    var pendingName: String = ""
-    private(set) var nameError: String?
+    @Published var pendingName: String = ""
+    @Published private(set) var nameError: String?
 
     /// Naming is the last input in an add/recapture flow, but only the
     /// halfway point of first-run setup, where the password still follows.
@@ -491,8 +489,8 @@ final class OnboardingController {
 
     // MARK: - Password
 
-    private(set) var passwordError: String?
-    private(set) var isSavingPassword = false
+    @Published private(set) var passwordError: String?
+    @Published private(set) var isSavingPassword = false
 
     init(
         isEnrollmentOnly: Bool = false,
@@ -626,8 +624,8 @@ final class OnboardingController {
         guideVisible = true
         cameraPreviewVisible = true
         showCheckmark = false
-        poseStartedAt = .now
-        captureReadyAt = .now + initialCaptureDelay
+        poseStartedAt = ProcessInfo.processInfo.systemUptime
+        captureReadyAt = ProcessInfo.processInfo.systemUptime + initialCaptureDelay
         poseHoldStartedAt = nil
         sweepWindow.present(for: self)
         Task { await camera.start() }
@@ -648,7 +646,7 @@ final class OnboardingController {
         permissionsPollTask?.cancel()
         permissionsPollTask = Task { [weak self] in
             while let self, !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
                 self.refreshPermissions()
             }
         }
@@ -700,7 +698,7 @@ final class OnboardingController {
 
     /// Devices offered by the picker — refreshed when the step appears, since a camera
     /// can be plugged in after the app launched.
-    private(set) var cameraDevices: [CameraDevice] = []
+    @Published private(set) var cameraDevices: [CameraDevice] = []
 
     func refreshCameraDevices() {
         cameraDevices = CameraDeviceCatalog.availableDevices()
@@ -761,11 +759,8 @@ final class OnboardingController {
     // MARK: - Guided enrollment
 
     private func observeFrames() {
-        withObservationTracking {
-            _ = camera.currentFrame
-        } onChange: { [weak self] in
+        camera.onFrame = { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.observeFrames()
                 await self?.processEnrollFrame()
             }
         }
@@ -838,7 +833,8 @@ final class OnboardingController {
     ) async {
 
         // Detection above still ran; only capture is held back until settled.
-        guard ContinuousClock.now >= captureReadyAt else {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now >= captureReadyAt else {
             matchStreak = 0
             poseHoldStartedAt = nil
             return
@@ -848,7 +844,7 @@ final class OnboardingController {
         // Only a 5-point alignment is reliably canonical; a 2-point/padded-crop fallback
         // isn't accepted toward enrollment.
         let alignmentOK = result.alignmentTier == .fivePoint
-        let widened = ContinuousClock.now - poseStartedAt > stallTimeout
+        let widened = now - poseStartedAt > stallTimeout
         let poseOK = poseMatches(yaw: yaw, pitch: pitch, pose: pose, widened: widened)
         guard qualityOK, alignmentOK, !isTooFar, poseOK else {
             matchStreak = 0
@@ -857,9 +853,9 @@ final class OnboardingController {
         }
 
         if poseHoldStartedAt == nil {
-            poseHoldStartedAt = .now
+            poseHoldStartedAt = now
         }
-        guard ContinuousClock.now - poseHoldStartedAt! >= poseHoldDuration else { return }
+        guard now - poseHoldStartedAt! >= poseHoldDuration else { return }
 
         matchStreak += 1
         guard matchStreak >= requiredMatchStreak else { return }
@@ -881,7 +877,7 @@ final class OnboardingController {
             }
             currentPoseIndex += 1
             capturedForCurrentPose = 0
-            poseStartedAt = .now
+            poseStartedAt = ProcessInfo.processInfo.systemUptime
             poseHoldStartedAt = nil
             if currentPoseIndex >= EnrollmentPose.allCases.count {
                 await finishEnrollment()
@@ -918,17 +914,17 @@ final class OnboardingController {
     private func finishEnrollment() async {
         enrollmentComplete = true
         sweepWindow.dismiss()
-        try? await Task.sleep(for: .seconds(OnboardingMetrics.guideOverlayFadeOut))
+        try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.guideOverlayFadeOut * 1_000_000_000))
 
         cameraPreviewVisible = false
-        try? await Task.sleep(for: .seconds(OnboardingMetrics.previewFadeOut))
+        try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.previewFadeOut * 1_000_000_000))
 
-        try? await Task.sleep(for: .seconds(OnboardingMetrics.checkmarkDelay))
+        try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.checkmarkDelay * 1_000_000_000))
         showCheckmark = true
 
         let elapsed = OnboardingMetrics.guideOverlayFadeOut + OnboardingMetrics.previewFadeOut + OnboardingMetrics.checkmarkDelay
         let remaining = max(OnboardingMetrics.cameraCompleteToNameDelay - elapsed, 0)
-        try? await Task.sleep(for: .seconds(remaining))
+        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
 
         camera.stop()
 
@@ -1052,8 +1048,8 @@ final class OnboardingController {
     /// notice alike.
     private func scheduleCompletionDismiss() {
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(OnboardingMetrics.completeScreenDismissDelay))
-            guard let self else { return }
+            try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.completeScreenDismissDelay * 1_000_000_000))
+            guard let self = self else { return }
             let shouldFireCompletion = self.isFirstRunFlow || self.isPostUpdateNotice
             let onComplete = self.onFirstRunComplete
             self.teardown()

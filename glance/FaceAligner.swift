@@ -20,7 +20,7 @@ enum AlignmentTier: String {
     case paddedCrop = "padded crop (no alignment)"
 }
 
-nonisolated enum FaceAligner {
+enum FaceAligner {
     static let outputSize = 112
 
     /// Standard ArcFace 112x112 template: left eye, right eye, nose, left mouth, right mouth. "Left"/"right" are

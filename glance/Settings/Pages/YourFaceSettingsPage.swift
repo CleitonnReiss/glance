@@ -11,7 +11,7 @@ import SwiftUI
 
 struct YourFaceSettingsPage: View {
     let environment: AppEnvironment
-    @Bindable private var store = FaceEnrollmentStore.shared
+    @ObservedObject private var store = FaceEnrollmentStore.shared
 
     @State private var sessionError: String?
     @State private var isUnlocking = false
@@ -71,7 +71,7 @@ struct YourFaceSettingsPage: View {
         .onAppear { store.reloadIfUnlocked() }
         // The enrollment flow runs in the notch, outside this view's
         // hierarchy, so nothing else prompts a re-check once it closes.
-        .onChange(of: NotchOverlayController.shared.phase) { _, newPhase in
+        .onChange(of: NotchOverlayController.shared.phase) { newPhase in
             guard newPhase == .closed else { return }
             store.reloadIfUnlocked()
         }

@@ -124,7 +124,6 @@ struct CameraSelectionPill: View {
                     .contentShape(Rectangle())
             }
             .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
             .buttonStyle(.plain)
             // Window-level accent tint otherwise paints the menu label blue.
             .tint(GlanceTheme.textPrimary)
@@ -154,7 +153,7 @@ struct PillSecureField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        SecureField("", text: $text, prompt: Text(placeholder).foregroundStyle(GlanceTheme.placeholder))
+        SecureField("", text: $text, prompt: Text(placeholder).foregroundColor(GlanceTheme.placeholder))
             .textFieldStyle(.plain)
             .font(GlanceTheme.Font.passwordPlaceholder)
             .foregroundStyle(GlanceTheme.textPrimary)
@@ -179,7 +178,7 @@ struct PillTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(GlanceTheme.placeholder))
+        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(GlanceTheme.placeholder))
             .textFieldStyle(.plain)
             .font(GlanceTheme.Font.passwordPlaceholder)
             .foregroundStyle(GlanceTheme.textPrimary)
@@ -206,11 +205,11 @@ private struct OnboardingFieldFirstResponder: NSViewRepresentable {
         guard enabled, !context.coordinator.didSchedule else { return }
         context.coordinator.didSchedule = true
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(OnboardingMetrics.fieldAutofocusDelay))
+            try? await Task.sleep(nanoseconds: UInt64(OnboardingMetrics.fieldAutofocusDelay * 1_000_000_000))
             NSApp.activate(ignoringOtherApps: true)
             for _ in 0..<8 {
                 if nsView.window != nil { break }
-                try? await Task.sleep(for: .milliseconds(50))
+                try? await Task.sleep(nanoseconds: 50_000_000)
             }
             guard let window = nsView.window else { return }
             window.makeKeyAndOrderFront(nil)

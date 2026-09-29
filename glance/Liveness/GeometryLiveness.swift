@@ -49,24 +49,24 @@ struct GeometryLivenessResult: Equatable {
     )
 
     /// Adapter into the shared cue vocabulary — see `LivenessCues.readings`.
-    nonisolated var planarReading: CueReading {
+    var planarReading: CueReading {
         CueReading(level: planarResidualScore, confidence: planarConfidence)
     }
 }
 
 /// Regions that sit on roughly one shallow surface, with enough spatial
 /// spread to constrain an 8-DOF homography. The nose is held out.
-nonisolated private let geometryFitRegions: Set<LandmarkRegion> = [
+private let geometryFitRegions: Set<LandmarkRegion> = [
     .leftEye, .rightEye, .leftEyebrow, .rightEyebrow, .outerLips,
 ]
 
 /// Protruding landmarks geometrically *inside* the fit hull, so leftover
 /// error is depth, not extrapolation. `faceContour` is excluded on purpose.
-nonisolated private let geometryProbeRegions: Set<LandmarkRegion> = [
+private let geometryProbeRegions: Set<LandmarkRegion> = [
     .nose, .noseCrest, .medianLine,
 ]
 
-nonisolated enum GeometryLiveness {
+enum GeometryLiveness {
     static func evaluate(_ window: [LivenessFrame], tuning: GeometryTuning = .default) -> GeometryLivenessResult {
         let lastLandmarks = window.last?.landmarks.count ?? 0
         var diagnostics = diagnosticRatios(from: window.last)

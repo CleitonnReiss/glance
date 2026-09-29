@@ -7,45 +7,35 @@
 
 import SwiftUI
 
-@main
-struct glanceApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    /// Only reliable way to reopen a `Window` scene once its `NSWindow` has fully closed.
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Scene {
-        settingsWindow
-    }
-
-    /// Suppressed so Settings doesn't appear on launch/restore. `openWindow` is captured here, not in `onAppear`, since the
-    /// window may never have appeared before the menu bar needs to open it.
-    private var settingsWindow: some Scene {
-        let open = openWindow
-        let delegate = appDelegate
-        DispatchQueue.main.async {
-            delegate.bindOpenWindowAction { open(id: "settings") }
-        }
-        return Window("Glance Settings", id: "settings") {
-            SettingsWindowView(environment: appDelegate.environment)
-                .onAppear {
-                    delegate.bindOpenWindowAction { open(id: "settings") }
-                }
-        }
-        // Deliberately no `.windowResizability(.contentSize)`: it kept re-deriving the window size from the titlebar band,
-        // growing the window whenever that band's height changed. Size is set once by WindowConfiguringView instead.
-        //
-        // Creates the window at its final size from the start. WindowConfiguringView only applies the size a runloop after
-        // the window first draws, so without this the first frame showed SwiftUI's own guess (much wider, much shorter).
-        .defaultSize(SettingsMetrics.windowSize)
-        .windowStyle(.hiddenTitleBar)
-        .defaultPosition(.center)
-        .defaultLaunchBehavior(.suppressed)
-        .restorationBehavior(.disabled)
+@MainActor
+final class SettingsWindowController: NSWindowController {
+    convenience init(environment: AppEnvironment) {
+        let rootView = SettingsWindowView(environment: environment)
+        let hostingController = NSHostingController(rootView: rootView)
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Glance Settings"
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.isReleasedWhenClosed = false
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.center()
+        self.init(window: window)
     }
 }
 
+@main
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private static var sharedDelegate: AppDelegate?
+
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        sharedDelegate = delegate
+        app.delegate = delegate
+        app.run()
+    }
     /// Owns the long-lived controllers so every Settings page and the menu bar's session row share the same instances instead of
     /// each spinning up its own camera/lock-monitor (see AppEnvironment.swift). Lives here rather than as `@State` because
     /// `@NSApplicationDelegateAdaptor` constructs this delegate before the scene body runs, so it's always safe to read.
@@ -55,15 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     /// Held so `menuNeedsUpdate` can refresh this row in place rather than rebuilding the whole menu.
     private var sessionMenuItem: NSMenuItem?
-    /// Bridges SwiftUI's `openWindow(\.settings)` action in from `glanceApp.body`, since this plain `NSObject` has no
-    /// `@Environment` of its own. Bound from the scene body (not `onAppear`) so it's ready before Settings has ever shown —
-    /// `NSApp.windows` stops containing the window once fully closed, so only `openWindow(id:)` can reliably re-create it.
-    var openSettingsWindowAction: (() -> Void)?
-
-    /// Reassigned on every scene rebuild so the (cheap) action never goes stale.
-    func bindOpenWindowAction(_ action: @escaping () -> Void) {
-        openSettingsWindowAction = action
-    }
+    private var settingsWindowController: SettingsWindowController?
 
     /// Guards `environment.updater.start()` against running twice — reachable from two call sites, and Sparkle doesn't promise
     /// starting an already-started `SPUUpdater` is a safe no-op.
@@ -72,10 +54,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Accessory before the Dock binds this launch to a persistent tile — starting `.regular` made the pinned icon bounce and
     /// get replaced by a Recents tile the moment the Dock icon was later hidden/shown.
     func applicationWillFinishLaunching(_ notification: Notification) {
+        print("Glance: applicationWillFinishLaunching")
         NSApp.setActivationPolicy(.accessory)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        print("Glance: applicationDidFinishLaunching")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         // Custom mark, not an SF Symbol; `isTemplate` is cheap insurance against a plain black-square render.
         let icon = NSImage(named: "MenuBarIcon")
@@ -92,17 +76,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Refreshes `sessionMenuItem` right before the menu displays — see `menuNeedsUpdate` below.
         menu.delegate = self
 
+        let lockScreenItem = NSMenuItem(title: "Lock Screen", action: #selector(lockMacScreen), keyEquivalent: "l")
+        lockScreenItem.keyEquivalentModifierMask = [.command, .control]
+        lockScreenItem.target = self
+        lockScreenItem.image = NSImage(systemSymbolName: "lock.shield.fill", accessibilityDescription: nil)
+        menu.addItem(lockScreenItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let sessionItem = NSMenuItem(title: "", action: #selector(toggleSession), keyEquivalent: "")
         sessionItem.target = self
         menu.addItem(sessionItem)
         sessionMenuItem = sessionItem
 
-        let settingsItem = NSMenuItem(title: "Settings", action: #selector(openSettingsWindow), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.image = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: nil)
         menu.addItem(settingsItem)
 
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(NSMenuItem.separator())
+
+        let quitItem = NSMenuItem(title: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quitItem.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)
         menu.addItem(quitItem)
 
@@ -192,12 +186,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateSessionMenuItem()
     }
 
+    @objc private func lockMacScreen() {
+        typealias SACLockScreenImmediateFunc = @convention(c) () -> Void
+        if let lib = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_LAZY) {
+            if let sym = dlsym(lib, "SACLockScreenImmediate") {
+                let lock = unsafeBitCast(sym, to: SACLockScreenImmediateFunc.self)
+                lock()
+            }
+            dlclose(lib)
+        }
+    }
+
     private func updateSessionMenuItem() {
         guard let sessionMenuItem else { return }
         let isUnlocked = environment.pocController.isSessionUnlocked
-        sessionMenuItem.title = isUnlocked ? "Session Unlocked" : "Session Locked"
+        sessionMenuItem.title = isUnlocked ? "Credential Vault: Unlocked" : "Credential Vault: Locked"
         sessionMenuItem.image = NSImage(
-            systemSymbolName: isUnlocked ? "lock.open.fill" : "lock.fill",
+            systemSymbolName: isUnlocked ? "key.fill" : "lock.fill",
             accessibilityDescription: nil
         )
     }
@@ -257,35 +262,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSApp.setActivationPolicy(.regular)
-        if let openSettingsWindowAction {
-            openSettingsWindowAction()
-        } else {
-            // `body` hasn't run yet somehow — falls back to a direct walk, which only works if a window instance still exists.
-            for window in NSApp.windows where window.canBecomeMain {
-                window.makeKeyAndOrderFront(nil)
-            }
+        if settingsWindowController == nil {
+            settingsWindowController = SettingsWindowController(environment: environment)
         }
-        // Coming from `.accessory` there's no user gesture to activate the app, so without this Settings appears inactive and
-        // won't take focus until the user Cmd-Tabs away and back.
-        makeSettingsKeyAndActive()
-    }
-
-    /// Two runloop hops: `openWindow(id:)` hasn't created the `NSWindow` on this turn, and `WindowConfiguringView` configures it
-    /// on the next — waiting one extra cycle orders front after the window actually exists.
-    private func makeSettingsKeyAndActive() {
+        settingsWindowController?.showWindow(nil)
+        settingsWindowController?.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        DispatchQueue.main.async { [weak self] in
-            self?.orderSettingsFront()
-            DispatchQueue.main.async {
-                self?.orderSettingsFront()
-            }
-        }
-    }
-
-    private func orderSettingsFront() {
-        NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.canBecomeMain }) {
-            window.makeKeyAndOrderFront(nil)
-        }
     }
 }

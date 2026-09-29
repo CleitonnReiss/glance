@@ -13,10 +13,12 @@ struct CameraDevice: Identifiable, Hashable {
     let name: String
 }
 
+@MainActor
 enum CameraDeviceCatalog {
     static func availableDevices() -> [CameraDevice] {
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .externalUnknown]
         let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            deviceTypes: deviceTypes,
             mediaType: .video,
             position: .unspecified
         )

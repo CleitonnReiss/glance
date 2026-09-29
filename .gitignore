@@ -17,3 +17,10 @@ __pycache__/
 
 # Local release notes
 RELEASING.md
+
+# Packaging and distributions
+dist/
+*.dmg
+*.pkg
+*.zip
+Glance-macOS-Monterey.zip

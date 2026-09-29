@@ -7,9 +7,9 @@
 
 import Foundation
 import CoreGraphics
-import Observation
+import Combine
 
-nonisolated struct FaceRecognitionResult {
+struct FaceRecognitionResult {
     let embedding: [Float]
     /// What was actually fed to the embedder, for debug UIs to inspect.
     let alignedImage: CGImage
@@ -18,7 +18,7 @@ nonisolated struct FaceRecognitionResult {
     let face: DetectedFace
 }
 
-nonisolated enum FaceRecognitionPipelineError: LocalizedError {
+enum FaceRecognitionPipelineError: LocalizedError {
     case noFaceDetected
     case alignmentFailed
 
@@ -30,15 +30,16 @@ nonisolated enum FaceRecognitionPipelineError: LocalizedError {
     }
 }
 
-/// `@Observable` so the debug UI can surface which embedder is active.
-@Observable
+private let minFaceWidthLock = NSLock()
+private var minFaceWidthStorage: Float = 0.18
+
 @MainActor
-final class FaceRecognitionPipeline {
+final class FaceRecognitionPipeline: ObservableObject {
     nonisolated let embedder: FaceEmbedder
 
     /// Set when ArcFace failed to load (see tools/convert_arcface.py) and the weaker Vision feature-print embedder is in use instead.
-    private(set) var usingFallbackEmbedder: Bool
-    private(set) var fallbackReason: String?
+    @Published private(set) var usingFallbackEmbedder: Bool
+    @Published private(set) var fallbackReason: String?
 
     init() {
         do {
@@ -89,8 +90,19 @@ final class FaceRecognitionPipeline {
         faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }
     }
 
-    /// Below this fraction of frame width, a face is treated as a bystander, not a candidate — shared with onboarding's "move closer" prompt. `nonisolated(unsafe)` because it's read from a background-task static func that can't touch GlanceSettings' MainActor-isolated storage.
-    nonisolated(unsafe) static var minimumProminentFaceWidth: Float = 0.18
+    /// Below this fraction of frame width, a face is treated as a bystander, not a candidate — shared with onboarding's "move closer" prompt.
+    nonisolated static var minimumProminentFaceWidth: Float {
+        get {
+            minFaceWidthLock.lock()
+            defer { minFaceWidthLock.unlock() }
+            return minFaceWidthStorage
+        }
+        set {
+            minFaceWidthLock.lock()
+            defer { minFaceWidthLock.unlock() }
+            minFaceWidthStorage = newValue
+        }
+    }
 
     /// Max normalized-coordinate drift between frames still counted as "the same person".
     nonisolated private static let continuityDistanceTolerance: CGFloat = 0.3
@@ -117,7 +129,7 @@ final class FaceRecognitionPipeline {
     }
 }
 
-nonisolated struct ScoredIdentity {
+struct ScoredIdentity {
     let identity: FaceIdentity
     /// Similarity against the identity's averaged template.
     let centroidSimilarity: Float

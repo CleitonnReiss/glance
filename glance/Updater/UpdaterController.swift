@@ -8,17 +8,16 @@
 //
 
 import AppKit
-import Observation
+import Combine
 import Sparkle
 
-@Observable
 @MainActor
-final class UpdaterController {
+final class UpdaterController: ObservableObject {
     private let controller: SPUStandardUpdaterController
     private let presentationDelegate = UpdatePresentationDelegate()
 
     /// Mirrors `SPUUpdater.canCheckForUpdates` (KVO-only on Sparkle's side, hence the manual observation below).
-    private(set) var canCheckForUpdates = false
+    @Published private(set) var canCheckForUpdates = false
     private var canCheckForUpdatesObservation: NSKeyValueObservation?
 
     /// Forwards straight to Sparkle rather than keeping a second stored copy — Sparkle already persists this itself under the
@@ -72,20 +71,26 @@ private final class UpdatePresentationDelegate: NSObject, SPUStandardUserDriverD
     private(set) var isPresentingUpdateUI = false
 
     /// Fires before any modal alert, including the plain "You're up to date" sheet from a manual check.
-    func standardUserDriverWillShowModalAlert() {
-        beginPresenting()
+    nonisolated func standardUserDriverWillShowModalAlert() {
+        Task { @MainActor in
+            self.beginPresenting()
+        }
     }
 
     /// Fires before Sparkle shows an actual found-update window, covering the real update path once releases exist.
-    func standardUserDriverWillHandleShowingUpdate(
+    nonisolated func standardUserDriverWillHandleShowingUpdate(
         _ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState
     ) {
-        beginPresenting()
+        Task { @MainActor in
+            self.beginPresenting()
+        }
     }
 
     /// Fires for every way an update session can end (dismissed, skipped, errored, installed) — the one place to clear the flag.
-    func standardUserDriverWillFinishUpdateSession() {
-        isPresentingUpdateUI = false
+    nonisolated func standardUserDriverWillFinishUpdateSession() {
+        Task { @MainActor in
+            self.isPresentingUpdateUI = false
+        }
     }
 
     private func beginPresenting() {

@@ -28,9 +28,8 @@ struct MinimalUnlockView: View {
                 .foregroundStyle(GlanceTheme.textPrimary)
                 // The explicit `.animation` below is required: the phase change that flips
                 // `isUnlocked` isn't itself wrapped in an animation transaction.
-                .contentTransition(.symbolEffect(.replace.magic(fallback: .replace)))
                 .animation(
-                    .smooth(duration: NotchGeometry.minimalLockAnimationDuration),
+                    .easeInOut(duration: NotchGeometry.minimalLockAnimationDuration),
                     value: isUnlocked
                 )
                 .frame(width: mediaWidth)
