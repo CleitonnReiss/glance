@@ -66,15 +66,38 @@ exit 0
 EOF
 chmod +x "$PKG_SCRIPTS/postinstall"
 
-rm -f "$DIST_DIR/Glance-macOS-Monterey.pkg"
+rm -f "$DIST_DIR/Glance-macOS-Monterey.pkg" build/glance-component.pkg
 pkgbuild --root "$PKG_ROOT" \
          --component-plist "$PKG_PLIST" \
          --scripts "$PKG_SCRIPTS" \
          --identifier com.jonathan.glance \
          --version 1.0.0 \
-         "$DIST_DIR/Glance-macOS-Monterey.pkg"
+         "build/glance-component.pkg"
 
-rm -rf "$PKG_ROOT" "$PKG_PLIST" "$PKG_SCRIPTS"
+cat << 'EOF' > "build/Distribution.xml"
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Glance</title>
+    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.jonathan.glance"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.jonathan.glance" visible="false">
+        <pkg-ref id="com.jonathan.glance"/>
+    </choice>
+    <pkg-ref id="com.jonathan.glance" version="1.0.0" onConclusion="none">glance-component.pkg</pkg-ref>
+</installer-gui-script>
+EOF
+
+productbuild --distribution "build/Distribution.xml" \
+             --package-path "build" \
+             "$DIST_DIR/Glance-macOS-Monterey.pkg"
+
+rm -rf "$PKG_ROOT" "$PKG_PLIST" "$PKG_SCRIPTS" "build/glance-component.pkg" "build/Distribution.xml"
 
 # 2. Create .dmg installer (Clean: only Glance.app and Applications symlink)
 echo "--- Building Glance-macOS-Monterey.dmg ---"
