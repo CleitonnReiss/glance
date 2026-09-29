@@ -20,6 +20,22 @@ enum AppLanguage: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    var shortName: String {
+        switch self {
+        case .ptBR: return "Português"
+        case .en: return "English"
+        case .es: return "Español"
+        }
+    }
+
+    var code: String {
+        switch self {
+        case .ptBR: return "PT"
+        case .en: return "EN"
+        case .es: return "ES"
+        }
+    }
+
     /// Automatically detects user preference or defaults to pt-BR
     static var defaultLanguage: AppLanguage {
         for pref in Locale.preferredLanguages {

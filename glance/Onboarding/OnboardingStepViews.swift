@@ -14,35 +14,57 @@ import AppKit
 /// Globe button in the initial screen to switch language before starting configuration.
 struct LanguageGlobeButton: View {
     @ObservedObject private var settings = GlanceSettings.shared
+    @State private var isHovering = false
 
     var body: some View {
-        Menu {
-            ForEach(AppLanguage.allCases) { lang in
-                Button(action: {
-                    settings.appLanguage = lang
-                }) {
-                    if settings.appLanguage == lang {
-                        Label(lang.displayName, systemImage: "checkmark")
-                    } else {
-                        Text(lang.displayName)
-                    }
-                }
-            }
-        } label: {
+        Button(action: showLanguageMenu) {
             HStack(spacing: 5) {
                 Image(systemName: "globe")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 16, weight: .semibold))
+                Text(settings.appLanguage.code)
+                    .font(.system(size: 11, weight: .bold))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
             }
             .foregroundStyle(GlanceTheme.textPrimary)
-            .frame(width: 48, height: OnboardingMetrics.pillButtonHeight)
-            .background(GlanceTheme.surface)
+            .padding(.horizontal, 9)
+            .frame(height: 30)
+            .background(Color.white.opacity(isHovering ? 0.20 : 0.12))
+            .overlay(
+                Capsule()
+                    .stroke(Color.white.opacity(isHovering ? 0.35 : 0.20), lineWidth: 1)
+            )
             .clipShape(Capsule())
         }
-        .menuStyle(.borderlessButton)
         .buttonStyle(.plain)
-        .accessibilityLabel("Language / Idioma")
+        .fixedSize()
+        .onHover { isHovering = $0 }
+        .accessibilityLabel(L10n.string(.language))
+    }
+
+    private func showLanguageMenu() {
+        let menu = NSMenu()
+        for lang in AppLanguage.allCases {
+            let item = NSMenuItem(title: lang.displayName, action: #selector(LanguageMenuTarget.selectLanguage(_:)), keyEquivalent: "")
+            item.target = LanguageMenuTarget.shared
+            item.representedObject = lang.rawValue
+            item.state = (settings.appLanguage == lang) ? .on : .off
+            menu.addItem(item)
+        }
+        let mouseLoc = NSEvent.mouseLocation
+        menu.popUp(positioning: menu.item(withTitle: settings.appLanguage.displayName), at: mouseLoc, in: nil)
+    }
+}
+
+@MainActor
+private final class LanguageMenuTarget: NSObject {
+    static let shared = LanguageMenuTarget()
+
+    @objc func selectLanguage(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String,
+           let lang = AppLanguage(rawValue: raw) {
+            GlanceSettings.shared.appLanguage = lang
+        }
     }
 }
 
@@ -52,31 +74,41 @@ struct IntroStepView: View {
 
     var body: some View {
         let lang = settings.appLanguage
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string(.introTitle, lang: lang))
-                    .font(GlanceTheme.Font.title)
-                    .foregroundStyle(GlanceTheme.textPrimary)
-                Text(L10n.string(.introSubtitle, lang: lang))
-                    .font(GlanceTheme.Font.button)
-                    .foregroundStyle(GlanceTheme.textSecondary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+        ZStack(alignment: .topLeading) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string(.introTitle, lang: lang))
+                        .font(GlanceTheme.Font.title)
+                        .foregroundStyle(GlanceTheme.textPrimary)
+                    Text(L10n.string(.introSubtitle, lang: lang))
+                        .font(GlanceTheme.Font.button)
+                        .foregroundStyle(GlanceTheme.textSecondary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
 
-                Spacer(minLength: 12)
+                    Spacer(minLength: 12)
 
-                HStack(spacing: 8) {
-                    PillButton(title: L10n.string(.next, lang: lang)) {
+                    PillButton(title: L10n.string(.next, lang: lang), width: 96) {
                         controller.advance()
                     }
+                }
+                .padding(.leading, 4)
+
+                Spacer(minLength: 4)
+
+                GlanceLogoView()
+                    .frame(width: 106, height: 106)
+                    .padding(.top, 4)
+            }
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
                     LanguageGlobeButton()
+                        .padding(.trailing, 116)
                 }
             }
-            .padding(.leading, 4)
-            Spacer(minLength: 4)
-            GlanceLogoView()
-                .frame(width: 106, height: 106)
-                .padding(.top, 4)
         }
         .onboardingContentPadding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
