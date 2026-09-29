@@ -123,8 +123,22 @@ cat << 'EOF' > "$APP_DIR/Contents/Info.plist"
 EOF
 
 # 7. Codesign
-echo "--- Codesigning Glance.app ---"
-codesign --force --sign - "$FRAMEWORKS_DIR/Sparkle.framework"
-codesign --force --deep --sign - -r='designated => identifier "com.jonathan.glance"' --entitlements glance/glance.entitlements "$APP_DIR"
+echo "--- Codesigning Glance.app inside-out ---"
+xattr -cr "$APP_DIR"
+
+SPARKLE="$FRAMEWORKS_DIR/Sparkle.framework"
+if [ -d "$SPARKLE" ]; then
+    echo "--- Signing Sparkle.framework components ---"
+    codesign --force --sign - "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" 2>/dev/null || true
+    codesign --force --sign - "$SPARKLE/Versions/B/XPCServices/Installer.xpc" 2>/dev/null || true
+    codesign --force --sign - "$SPARKLE/Versions/B/Autoupdate" 2>/dev/null || true
+    codesign --force --deep --sign - "$SPARKLE/Versions/B/Updater.app" 2>/dev/null || true
+    codesign --force --sign - "$SPARKLE"
+fi
+
+codesign --force --sign - -r='designated => identifier "com.jonathan.glance"' --entitlements glance/glance.entitlements "$APP_DIR"
+
+echo "--- Verifying signature validity ---"
+codesign -vvv --deep --strict "$APP_DIR"
 
 echo "=== Build Complete! Glance.app is ready at $APP_DIR ==="

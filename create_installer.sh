@@ -14,10 +14,21 @@ fi
 DIST_DIR="dist"
 mkdir -p "$DIST_DIR"
 
-# 1. Create .pkg installer
+# 1. Create .pkg installer with postinstall script (auto-removes quarantine)
 echo "--- Building Glance-macOS-Monterey.pkg ---"
+PKG_SCRIPTS="build/pkg_scripts"
+mkdir -p "$PKG_SCRIPTS"
+cat << 'EOF' > "$PKG_SCRIPTS/postinstall"
+#!/bin/bash
+# Remove quarantine attributes so Gatekeeper never displays "damaged app" error
+xattr -cr /Applications/Glance.app 2>/dev/null || true
+exit 0
+EOF
+chmod +x "$PKG_SCRIPTS/postinstall"
+
 pkgbuild --component build/Glance.app \
          --install-location /Applications \
+         --scripts "$PKG_SCRIPTS" \
          --identifier com.jonathan.glance \
          --version 1.0.0 \
          "$DIST_DIR/Glance-macOS-Monterey.pkg"
@@ -43,13 +54,38 @@ INSTRUÇÕES DE INSTALAÇÃO:
 3. Se o macOS avisar sobre desenvolvedor não verificado no primeiro acesso:
    - Abra Preferências do Sistema > Segurança e Privacidade > Geral
    - Clique em "Abrir Mesmo Assim" (Open Anyway).
-4. No primeiro uso, conceda:
-   - Permissão de Câmera (para reconhecimento facial local).
-   - Permissão de Acessibilidade (em Segurança e Privacidade > Acessibilidade,
-     para permitir a digitação segura da senha no login).
-5. Cadastre seu rosto e configure a senha do Mac.
-6. Pronto! Para bloquear e testar a qualquer momento, use o menu do Glance ou o atalho Ctrl+Cmd+L (⌃⌘L).
+
+⚠️ SE O MAC EXIBIR: "GLANCE ESTÁ DANIFICADO E DEVE SER MOVIDO PARA O LIXO"
+O macOS Gatekeeper bloqueia automaticamente aplicativos gratuitos baixados da internet
+que não possuem o certificado pago de US$ 99/ano da Apple.
+COMO RESOLVER EM 1 SEGUNDO:
+- Opção 1: Dê dois cliques em "Corrigir App Danificado (Liberar Acesso).command" aqui no instalador.
+- Opção 2: Ou abra o Terminal e cole o comando:
+      xattr -cr /Applications/Glance.app
+- Opção 3: Ou instale pelo arquivo "Glance-macOS-Monterey.pkg", que remove o bloqueio automaticamente.
+
+PERMISSÕES NECESSÁRIAS:
+- Câmera: para reconhecimento facial local.
+- Acessibilidade: em Preferências do Sistema > Segurança e Privacidade > Acessibilidade,
+  para permitir a digitação segura da senha no login.
 EOF
+
+cat << 'EOF' > "$DMG_STAGING/Corrigir App Danificado (Liberar Acesso).command"
+#!/bin/bash
+clear
+echo "=================================================="
+echo "    Liberador de Acesso do Glance no macOS        "
+echo "=================================================="
+echo ""
+echo "Removendo a restrição de quarentena do macOS Gatekeeper..."
+xattr -cr /Applications/Glance.app 2>/dev/null || true
+echo "✅ Restrição removida com sucesso!"
+echo "Iniciando o Glance agora..."
+open /Applications/Glance.app
+exit 0
+EOF
+chmod +x "$DMG_STAGING/Corrigir App Danificado (Liberar Acesso).command"
+
 
 cat << 'EOF' > "$DMG_STAGING/Desinstalar Glance.command"
 #!/bin/bash
