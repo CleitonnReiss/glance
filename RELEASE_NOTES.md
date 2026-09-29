@@ -55,6 +55,19 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 - **Correção do Crash ao Confirmar Senha (`EXC_BAD_ACCESS` / `vImageConverter`)**: Eliminada a falha de desalocamento em `QuartzCore`/`CoreGraphics` ao concluir o assistente de configuração. A transição agora utiliza `OffsetOpacity` nativa, dispensando filtros de rasterização de desfoque conflitantes com o campo seguro de senha no macOS 12 Monterey.
 - **Sincronização Imediata no Disco**: A gravação de conclusão do Onboarding e de chave de sessão é persistida instantaneamente com `defaults.synchronize()`, garantindo que o app nunca perca o estado de configuração nem reabra pedindo onboarding novamente após a configuração inicial.
 
+### 8. 📦 Correção de Permissões no Instalador PKG (Equiparação 100% com DMG)
+- **Desbloqueio dos Pesos do Modelo ArcFace**: Corrigidas as permissões restritivas (`40700` para `40755`) no diretório `ArcFace.mlmodelc/weights/` que bloqueavam a leitura de `weight.bin` por usuários não-root, destravando completamente o cadastro facial no PKG.
+- **Propriedade Correta do Bundle (`$CONSOLE_USER:staff`)**: O script `postinstall` agora detecta o usuário ativo do console e atribui a titularidade do `/Applications/Glance.app` diretamente a ele. Com isso, tanto a opção de desinstalação integrada do app quanto o ato de arrastar para a Lixeira do Finder funcionam sem pedir senha de administrador, exatamente como no DMG.
+
+### 9. 🌐 Internacionalização Completa (Português do Brasil, English, Español)
+- **Seletor de Idiomas em Tempo Real**: Adicionado menu de seleção de idiomas na primeira linha da aba **Geral** das Configurações, com troca instantânea e reatividade em tempo real em todas as telas sem necessidade de reiniciar o aplicativo.
+- **Tradução de 100% da Interface**:
+  - Todo o fluxo de Onboarding (Boas-vindas, Permissões, Aviso de Segurança, Seleção de Câmera, as 9 poses de orientação da cabeça e telas de Nome/Senha/Conclusão).
+  - Todas as abas de Preferências (Geral, Seu Rosto, Senha, Câmera, Reconhecimento e Sobre).
+  - Ícone e itens da barra de status superior (menu do sistema).
+  - Caixas de diálogo de confirmação (redefinição de fábrica e desinstalação completa).
+- **Detecção Inteligente do Sistema**: O aplicativo seleciona automaticamente o Português do Brasil para usuários com macOS em português ou caso nenhuma preferência tenha sido definida.
+
 ---
 
 ## 🛠️ Instruções de Instalação e Permissões

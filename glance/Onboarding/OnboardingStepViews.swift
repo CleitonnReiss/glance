@@ -15,18 +15,19 @@ struct IntroStepView: View {
     let controller: OnboardingController
 
     var body: some View {
+        let lang = GlanceSettings.shared.appLanguage
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Glance")
+                Text(L10n.string(.introTitle, lang: lang))
                     .font(GlanceTheme.Font.title)
                     .foregroundStyle(GlanceTheme.textPrimary)
-                Text("Face Unlock for Mac")
+                Text(L10n.string(.introSubtitle, lang: lang))
                     .font(GlanceTheme.Font.button)
                     .foregroundStyle(GlanceTheme.textSecondary)
 
                 Spacer(minLength: 12)
 
-                PillButton(title: "Next") {
+                PillButton(title: L10n.string(.next, lang: lang)) {
                     controller.advance()
                 }
             }
@@ -59,7 +60,7 @@ struct PermissionsStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Permissions")
+            Text(L10n.string(.permTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .padding(.leading, 4)
@@ -67,24 +68,24 @@ struct PermissionsStepView: View {
             // Spacer(minLength: 0)
 
             PermissionRow(
-                title: "Accessibility",
-                detail: "Allow Glance to unlock your Mac",
+                title: L10n.string(.permAccessibilityTitle),
+                detail: L10n.string(.permAccessibilityDetail),
                 granted: controller.accessibilityGranted
             ) { controller.grantAccessibility() }
 
             PermissionRow(
-                title: "Camera",
-                detail: "Allow Glance to recognize your face",
+                title: L10n.string(.permCameraTitle),
+                detail: L10n.string(.permCameraDetail),
                 granted: controller.cameraPermission == .granted
             ) { controller.grantCamera() }
 
             // Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                PillButton(title: "Back", style: .secondary) {
+                PillButton(title: L10n.string(.back), style: .secondary) {
                     controller.back()
                 }
-                PillButton(title: "Next", isEnabled: controller.bothPermissionsGranted) {
+                PillButton(title: L10n.string(.next), isEnabled: controller.bothPermissionsGranted) {
                     controller.advance()
                 }
             }
@@ -108,13 +109,13 @@ struct SecurityNoticeStepView: View {
                 .padding(.top, 25)
                 .padding(.leading, 4)
 
-            Text("Glance is not as secure as Apple's FaceID or TouchID.")
+            Text(L10n.string(.secNoticeTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 4)
 
-            Text("It uses your Mac's standard webcam and is designed for convenience, not high-security authentication.")
+            Text(L10n.string(.secNoticeDetail))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -124,15 +125,15 @@ struct SecurityNoticeStepView: View {
             HStack(spacing: 10) {
                 if controller.isPostUpdateNotice {
                     // Declining isn't a real option here — see `declinePostUpdateNotice()`.
-                    PillButton(title: "No thanks", style: .secondary) {
+                    PillButton(title: L10n.string(.secNoticeDecline), style: .secondary) {
                         controller.declinePostUpdateNotice()
                     }
                 } else {
-                    PillButton(title: "Back", style: .secondary) {
+                    PillButton(title: L10n.string(.back), style: .secondary) {
                         controller.back()
                     }
                 }
-                PillButton(title: "I understand", isDefault: true) {
+                PillButton(title: L10n.string(.secNoticeAccept), isDefault: true) {
                     controller.advance()
                 }
             }
@@ -152,12 +153,12 @@ struct PreSetupStepView: View {
         VStack(spacing: 2) {
             HStack(alignment: .top, spacing: 2) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Set up Face\nRecognition")
+                    Text(L10n.string(.preSetupTitle))
                         .font(GlanceTheme.Font.title)
                         .foregroundStyle(GlanceTheme.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Follow the directions\nshown on the screen")
+                    Text(L10n.string(.preSetupDetail))
                         .font(GlanceTheme.Font.button)
                         .foregroundStyle(GlanceTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -171,10 +172,10 @@ struct PreSetupStepView: View {
             Spacer(minLength: 4)
 
             HStack(spacing: 10) {
-                PillButton(title: "Back", style: .secondary) {
+                PillButton(title: L10n.string(.back), style: .secondary) {
                     controller.back()
                 }
-                PillButton(title: "Next") {
+                PillButton(title: L10n.string(.next)) {
                     controller.advance()
                 }
             }
@@ -198,13 +199,13 @@ struct SelectCameraStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Select camera")
+            Text(L10n.string(.selectCameraTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .padding(.leading, 4)
                 .padding(.top, 14)
 
-            Text("Used for Face enrollment and for unlocking your Mac")
+            Text(L10n.string(.selectCameraSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -222,10 +223,10 @@ struct SelectCameraStepView: View {
             Spacer(minLength: 4)
 
             HStack(spacing: 10) {
-                PillButton(title: "Back", style: .secondary) {
+                PillButton(title: L10n.string(.back), style: .secondary) {
                     controller.back()
                 }
-                PillButton(title: "Next") {
+                PillButton(title: L10n.string(.next)) {
                     controller.advance()
                 }
             }
@@ -352,7 +353,7 @@ private struct EnrollmentCloseButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .accessibilityLabel("Close")
+        .accessibilityLabel(L10n.string(.close))
     }
 }
 
@@ -379,12 +380,12 @@ struct NameStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Name this face")
+            Text(L10n.string(.nameStepTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .padding(.leading, 4)
 
-            Text("Used to tell enrolled faces apart when more than one person is set up on this Mac.")
+            Text(L10n.string(.nameStepSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -392,7 +393,7 @@ struct NameStepView: View {
 
             Spacer(minLength: 2)
 
-            PillTextField(placeholder: "Enter a name...", text: $controller.pendingName, autofocus: true) {
+            PillTextField(placeholder: L10n.string(.namePlaceholder), text: $controller.pendingName, autofocus: true) {
                 controller.confirmName()
             }
 
@@ -404,7 +405,7 @@ struct NameStepView: View {
             }
 
             HStack(spacing: 10) {
-                PillButton(title: "Back", style: .secondary) {
+                PillButton(title: L10n.string(.back), style: .secondary) {
                     controller.back()
                 }
                 PillButton(title: controller.nameStepPrimaryTitle, isEnabled: !trimmedName.isEmpty, isDefault: true) {
@@ -427,12 +428,12 @@ struct PasswordStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Enter your password")
+            Text(L10n.string(.passwordStepTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
                 .padding(.leading, 4)
 
-            Text("Your password is required to unlock your Mac. It is encrypted and securely stored on your device. Glance works entirely offline, so your password never leaves your Mac.")
+            Text(L10n.string(.passwordStepSubtitle))
                 .font(GlanceTheme.Font.passwordCaption)
                 .foregroundStyle(GlanceTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -440,7 +441,7 @@ struct PasswordStepView: View {
 
             Spacer(minLength: 2)
 
-            PillSecureField(placeholder: "Enter password...", text: $password, autofocus: true) {
+            PillSecureField(placeholder: L10n.string(.passwordPlaceholder), text: $password, autofocus: true) {
                 guard !password.isEmpty, !controller.isSavingPassword else { return }
                 Task { _ = await controller.finish(password: password) }
             }
@@ -454,11 +455,11 @@ struct PasswordStepView: View {
             // Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                PillButton(title: "Back", style: .secondary) {
+                PillButton(title: L10n.string(.back), style: .secondary) {
                     controller.back()
                 }
                 PillButton(
-                    title: controller.isSavingPassword ? "Saving…" : "Confirm",
+                    title: controller.isSavingPassword ? L10n.string(.saving) : L10n.string(.confirm),
                     isEnabled: !password.isEmpty && !controller.isSavingPassword,
                     isDefault: true
                 ) {
@@ -477,7 +478,7 @@ struct PasswordStepView: View {
 struct CompleteStepView: View {
     var body: some View {
         HStack(spacing: 12) {
-            Text("You're all set")
+            Text(L10n.string(.completeTitle))
                 .font(GlanceTheme.Font.title)
                 .foregroundStyle(GlanceTheme.textPrimary)
             Spacer(minLength: 4)

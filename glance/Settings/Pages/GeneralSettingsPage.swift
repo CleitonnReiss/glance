@@ -31,8 +31,19 @@ struct GeneralSettingsPage: View {
     }
 
     var body: some View {
+        let lang = settings.appLanguage
         SettingsGroup {
-            SettingsRowContent(title: "Launch at login") {
+            SettingsRowContent(title: L10n.string(.language, lang: lang)) {
+                SettingsMenuPickerPill(label: settings.appLanguage.displayName) {
+                    ForEach(AppLanguage.allCases) { item in
+                        Button(item.displayName) {
+                            settings.appLanguage = item
+                        }
+                    }
+                }
+            }
+            SettingsGroupDivider()
+            SettingsRowContent(title: L10n.string(.launchAtLoginTitle, lang: lang)) {
                 GlanceToggle(isOn: Binding(
                     get: { launchAtLoginEnabled },
                     set: { newValue in
@@ -48,13 +59,13 @@ struct GeneralSettingsPage: View {
                 ))
             }
             SettingsGroupDivider()
-            SettingsRowContent(title: "Enable Face Unlock") {
+            SettingsRowContent(title: L10n.string(.enableFaceUnlockTitle, lang: lang)) {
                 GlanceToggle(isOn: $coordinator.isEnabled)
             }
             SettingsGroupDivider()
             UnlockTriggerPicker(selection: $settings.unlockTriggers, isEnabled: coordinator.isEnabled)
             SettingsGroupDivider()
-            displayPicker()
+            displayPicker(lang: lang)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
             screens = NSScreen.screens
@@ -82,26 +93,26 @@ struct GeneralSettingsPage: View {
         if hasInheritedXcodePermission {
             SettingsCaption(text: "Running from Xcode — permission checks resolve against Xcode’s grants, not glance’s, so this reading is meaningless. Launch glance.app on its own to see the real state.")
         } else if needsInputMonitoring {
-            inputMonitoringNotice()
+            inputMonitoringNotice(lang: lang)
         }
 
         VStack(alignment: .leading, spacing: 8) {
-            SettingsSectionTitle(text: "Behaviour")
+            SettingsSectionTitle(text: L10n.string(.behaviourTitle, lang: lang))
             SettingsGroup {
-                SettingsRowContent(title: "Retry on notch hover") {
+                SettingsRowContent(title: L10n.string(.retryOnHoverTitle, lang: lang)) {
                     GlanceToggle(isOn: $settings.retryOnHover)
                 }
                 SettingsGroupDivider()
-                SettingsRowContent(title: "Auto retry once after failure") {
+                SettingsRowContent(title: L10n.string(.autoRetryTitle, lang: lang)) {
                     GlanceToggle(isOn: $settings.autoRetryOnce)
                 }
                 SettingsGroupDivider()
-                SettingsRowContent(title: "Haptic feedback") {
+                SettingsRowContent(title: L10n.string(.hapticFeedbackTitle, lang: lang)) {
                     GlanceToggle(isOn: $settings.hapticFeedbackEnabled)
                 }
                 SettingsGroupDivider()
                 SettingsSteppedSliderRowContent(
-                    title: "Face detection duration",
+                    title: L10n.string(.faceDetectionDurationTitle, lang: lang),
                     valueLabel: "\(settings.faceDetectionSeconds)s",
                     index: Binding(
                         get: { Double(settings.faceDetectionSeconds - GlanceSettings.faceDetectionRange.lowerBound) },
@@ -113,9 +124,9 @@ struct GeneralSettingsPage: View {
         }
 
         VStack(alignment: .leading, spacing: 8) {
-            SettingsSectionTitle(text: "Animation")
+            SettingsSectionTitle(text: L10n.string(.animationTitle, lang: lang))
             SettingsGroup {
-                SettingsRowContent(title: "Show animation") {
+                SettingsRowContent(title: L10n.string(.showAnimationTitle, lang: lang)) {
                     GlanceToggle(isOn: $settings.showUnlockAnimation)
                 }
                 SettingsGroupDivider()
@@ -128,10 +139,10 @@ struct GeneralSettingsPage: View {
     }
 
     /// Shown while "On space" is selected but Input Monitoring isn't granted.
-    private func inputMonitoringNotice() -> some View {
+    private func inputMonitoringNotice(lang: AppLanguage) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SettingsCaption(text: "“On space” reads the keyboard directly to see the space key on the lock screen, which needs Accessibility — the same permission glance uses to type your password. Switch glance on under Privacy & Security → Accessibility, then quit and reopen glance.")
-            Button("Open Accessibility settings") {
+            SettingsCaption(text: L10n.string(.inputMonitoringNotice, lang: lang))
+            Button(L10n.string(.openAccessibilitySettings, lang: lang)) {
                 // Covers the rare install with no Accessibility grant at all.
                 SpaceKeyMonitor.requestInputMonitoringAccess()
                 openSystemSettings(pane: "Privacy_Accessibility")
@@ -150,10 +161,10 @@ struct GeneralSettingsPage: View {
         NSWorkspace.shared.open(url)
     }
 
-    private func displayPicker() -> some View {
-        SettingsRowContent(title: "Display on") {
-            SettingsMenuPickerPill(label: displayLabel) {
-                Button("Main display") {
+    private func displayPicker(lang: AppLanguage) -> some View {
+        SettingsRowContent(title: L10n.string(.displayOnTitle, lang: lang)) {
+            SettingsMenuPickerPill(label: displayLabel(lang: lang)) {
+                Button(L10n.string(.mainDisplay, lang: lang)) {
                     settings.preferredDisplayID = nil
                     settings.preferredDisplayName = nil
                 }
@@ -180,14 +191,16 @@ struct GeneralSettingsPage: View {
         }
     }
 
-    private var displayLabel: String {
-        guard let targetID = settings.preferredDisplayID else { return "Main display" }
+    private func displayLabel(lang: AppLanguage) -> String {
+        guard let targetID = settings.preferredDisplayID else { return L10n.string(.mainDisplay, lang: lang) }
         if let connected = screens.first(where: { $0.stableDisplayID == targetID }) {
             return connected.localizedName
         }
         // Picked, but not currently connected — say so rather than showing
         // a bare ID or falling back to another display's name.
-        guard let name = settings.preferredDisplayName else { return "Selected display (disconnected)" }
-        return "\(name) (disconnected)"
+        guard let name = settings.preferredDisplayName else {
+            return "\(L10n.string(.mainDisplay, lang: lang)) \(L10n.string(.displayDisconnected, lang: lang))"
+        }
+        return "\(name) \(L10n.string(.displayDisconnected, lang: lang))"
     }
 }

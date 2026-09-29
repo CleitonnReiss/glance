@@ -123,12 +123,13 @@ enum AppResetter {
 
     /// Complete uninstallation: prompts the user, wipes all data, moves the app to Trash, and terminates.
     static func promptUninstall() {
+        let lang = GlanceSettings.shared.appLanguage
         let alert = NSAlert()
-        alert.messageText = "Desinstalar o Glance Completamente?"
-        alert.informativeText = "Isso removerá todas as configurações, os dados faciais cadastrados, a senha do Chaveiro, a inicialização automática e moverá o Glance para a Lixeira do seu Mac."
+        alert.messageText = L10n.string(.alertUninstallTitle, lang: lang)
+        alert.informativeText = L10n.string(.alertUninstallMessage, lang: lang)
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "Desinstalar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: L10n.string(.alertUninstallBtn, lang: lang))
+        alert.addButton(withTitle: L10n.string(.cancel, lang: lang))
 
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return }
@@ -136,9 +137,19 @@ enum AppResetter {
         // Clean all user data
         resetAllUserData(keepApplicationFile: false)
 
-        // Move .app to Trash
+        // Move .app to Trash with fallback
         let bundleURL = Bundle.main.bundleURL
-        NSWorkspace.shared.recycle([bundleURL]) { _, _ in
+        NSWorkspace.shared.recycle([bundleURL]) { _, error in
+            if error != nil {
+                let fm = FileManager.default
+                if let trash = fm.urls(for: .trashDirectory, in: .userDomainMask).first {
+                    let dest = trash.appendingPathComponent(bundleURL.lastPathComponent)
+                    try? fm.removeItem(at: dest)
+                    try? fm.moveItem(at: bundleURL, to: dest)
+                } else {
+                    try? fm.removeItem(at: bundleURL)
+                }
+            }
             DispatchQueue.main.async {
                 NSApp.terminate(nil)
             }
@@ -152,12 +163,13 @@ enum AppResetter {
 
     /// Resets app and restarts onboarding wizard
     static func promptResetAndReconfigure(onboardingStarter: @escaping () -> Void) {
+        let lang = GlanceSettings.shared.appLanguage
         let alert = NSAlert()
-        alert.messageText = "Redefinir Todas as Configurações?"
-        alert.informativeText = "Isso apagará o cadastro facial atual, a senha do Chaveiro e as preferências, permitindo que você configure o Glance novamente do zero."
+        alert.messageText = L10n.string(.alertResetTitle, lang: lang)
+        alert.informativeText = L10n.string(.alertResetMessage, lang: lang)
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Redefinir e Configurar")
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: L10n.string(.alertResetBtn, lang: lang))
+        alert.addButton(withTitle: L10n.string(.cancel, lang: lang))
 
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return }

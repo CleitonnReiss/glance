@@ -18,7 +18,11 @@ enum AutoLockInterval: Int, CaseIterable, Identifiable {
 
     var id: Int { rawValue }
 
-    var title: String { rawValue == 1 ? "1 day" : "\(rawValue) days" }
+    var title: String {
+        rawValue == 1
+            ? L10n.string(.autoLock1Day)
+            : L10n.string(.autoLockDays, rawValue)
+    }
 
     var duration: TimeInterval { TimeInterval(rawValue) * 24 * 60 * 60 }
 
@@ -44,8 +48,8 @@ enum UnlockAnimationStyle: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .none: return "None"
-        case .minimal: return "Minimal"
-        case .original: return "Original"
+        case .minimal: return L10n.string(.animationMinimal)
+        case .original: return L10n.string(.animationOriginal)
         }
     }
 
@@ -69,9 +73,9 @@ enum UnlockTrigger: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .onWake: return "On wake"
-        case .onLock: return "On lock"
-        case .onSpace: return "On space"
+        case .onWake: return L10n.string(.triggerOnWake)
+        case .onLock: return L10n.string(.triggerOnLock)
+        case .onSpace: return L10n.string(.triggerOnSpace)
         }
     }
 
@@ -112,9 +116,19 @@ final class GlanceSettings: ObservableObject {
         static let hasCompletedOnboarding = "GlanceSettings.hasCompletedOnboarding"
         static let onboardingResumeStep = "GlanceSettings.onboardingResumeStep"
         static let hasAcknowledgedSecurityNotice = "GlanceSettings.hasAcknowledgedSecurityNotice"
+        static let appLanguage = "GlanceSettings.appLanguage"
     }
 
     private let defaults = UserDefaults.standard
+
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            AppLanguage.current = appLanguage
+            defaults.set(appLanguage.rawValue, forKey: Key.appLanguage)
+            defaults.synchronize()
+            NotificationCenter.default.post(name: Notification.Name("GlanceLanguageChanged"), object: appLanguage)
+        }
+    }
 
     @Published var isFaceUnlockEnabled: Bool {
         didSet { defaults.set(isFaceUnlockEnabled, forKey: Key.isFaceUnlockEnabled) }
@@ -324,6 +338,14 @@ final class GlanceSettings: ObservableObject {
         onboardingResumeStep = defaults.string(forKey: Key.onboardingResumeStep)
             .flatMap(OnboardingStep.init(rawValue:))
         hasAcknowledgedSecurityNotice = defaults.object(forKey: Key.hasAcknowledgedSecurityNotice) as? Bool ?? false
+
+        if let raw = defaults.string(forKey: Key.appLanguage),
+           let lang = AppLanguage(rawValue: raw) {
+            appLanguage = lang
+        } else {
+            appLanguage = AppLanguage.current
+        }
+        AppLanguage.current = appLanguage
 
         // Push into the nonisolated mirror immediately, or FaceRecognitionPipeline
         // would keep its own default until the slider is first touched.

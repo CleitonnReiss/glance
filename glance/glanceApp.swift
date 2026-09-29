@@ -43,8 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     /// Kept alive for the app's lifetime — a local variable would vanish (and the icon with it) once `applicationDidFinishLaunching` returns.
     private var statusItem: NSStatusItem?
-    /// Held so `menuNeedsUpdate` can refresh this row in place rather than rebuilding the whole menu.
+    private var lockScreenMenuItem: NSMenuItem?
     private var sessionMenuItem: NSMenuItem?
+    private var settingsMenuItem: NSMenuItem?
+    private var resetMenuItem: NSMenuItem?
+    private var uninstallMenuItem: NSMenuItem?
+    private var quitMenuItem: NSMenuItem?
     private var settingsWindowController: SettingsWindowController?
 
     /// Guards `environment.updater.start()` against running twice — reachable from two call sites, and Sparkle doesn't promise
@@ -66,14 +70,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.image = icon
 
         let menu = NSMenu()
-        // Refreshes `sessionMenuItem` right before the menu displays — see `menuNeedsUpdate` below.
+        // Refreshes menu items right before the menu displays — see `menuNeedsUpdate` below.
         menu.delegate = self
 
-        let lockScreenItem = NSMenuItem(title: "Lock Screen", action: #selector(lockMacScreen), keyEquivalent: "l")
+        let lang = GlanceSettings.shared.appLanguage
+
+        let lockScreenItem = NSMenuItem(title: L10n.string(.menuLockScreen, lang: lang), action: #selector(lockMacScreen), keyEquivalent: "l")
         lockScreenItem.keyEquivalentModifierMask = [.command, .control]
         lockScreenItem.target = self
         lockScreenItem.image = NSImage(systemSymbolName: "lock.shield.fill", accessibilityDescription: nil)
         menu.addItem(lockScreenItem)
+        lockScreenMenuItem = lockScreenItem
 
         menu.addItem(NSMenuItem.separator())
 
@@ -82,33 +89,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(sessionItem)
         sessionMenuItem = sessionItem
 
-        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettingsWindow), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: L10n.string(.menuSettings, lang: lang), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.image = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: nil)
         menu.addItem(settingsItem)
+        settingsMenuItem = settingsItem
 
         menu.addItem(NSMenuItem.separator())
 
-        let resetItem = NSMenuItem(title: "Reset & Reconfigure...", action: #selector(promptReset), keyEquivalent: "")
+        let resetItem = NSMenuItem(title: L10n.string(.menuReset, lang: lang), action: #selector(promptReset), keyEquivalent: "")
         resetItem.target = self
         resetItem.image = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)
         menu.addItem(resetItem)
+        resetMenuItem = resetItem
 
-        let uninstallItem = NSMenuItem(title: "Uninstall Glance Completely...", action: #selector(promptUninstall), keyEquivalent: "")
+        let uninstallItem = NSMenuItem(title: L10n.string(.menuUninstall, lang: lang), action: #selector(promptUninstall), keyEquivalent: "")
         uninstallItem.target = self
         uninstallItem.image = NSImage(systemSymbolName: "trash.fill", accessibilityDescription: nil)
         menu.addItem(uninstallItem)
+        uninstallMenuItem = uninstallItem
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit Glance", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.string(.menuQuit, lang: lang), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quitItem.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)
         menu.addItem(quitItem)
+        quitMenuItem = quitItem
 
         item.menu = menu
         statusItem = item
 
-        updateSessionMenuItem()
+        updateSessionMenuItem(lang: lang)
 
         // SwiftUI can flip the app back to `.regular` while installing scenes even with `.suppressed`; re-assert accessory.
         NSApp.setActivationPolicy(.accessory)
@@ -190,9 +201,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.setActivationPolicy(.accessory)
     }
 
-    /// Fires right before the menu opens — simpler than keeping an `NSMenuItem` reactively bound to `isSessionUnlocked`.
+    /// Fires right before the menu opens — refreshes all items with current language and state.
     func menuNeedsUpdate(_ menu: NSMenu) {
-        updateSessionMenuItem()
+        let lang = GlanceSettings.shared.appLanguage
+        lockScreenMenuItem?.title = L10n.string(.menuLockScreen, lang: lang)
+        settingsMenuItem?.title = L10n.string(.menuSettings, lang: lang)
+        resetMenuItem?.title = L10n.string(.menuReset, lang: lang)
+        uninstallMenuItem?.title = L10n.string(.menuUninstall, lang: lang)
+        quitMenuItem?.title = L10n.string(.menuQuit, lang: lang)
+        updateSessionMenuItem(lang: lang)
     }
 
     @objc private func lockMacScreen() {
@@ -206,10 +223,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func updateSessionMenuItem() {
+    private func updateSessionMenuItem(lang: AppLanguage = AppLanguage.current) {
         guard let sessionMenuItem else { return }
         let isUnlocked = environment.pocController.isSessionUnlocked
-        sessionMenuItem.title = isUnlocked ? "Credential Vault: Unlocked" : "Credential Vault: Locked"
+        sessionMenuItem.title = isUnlocked
+            ? L10n.string(.menuVaultUnlocked, lang: lang)
+            : L10n.string(.menuVaultLocked, lang: lang)
         sessionMenuItem.image = NSImage(
             systemSymbolName: isUnlocked ? "key.fill" : "lock.fill",
             accessibilityDescription: nil

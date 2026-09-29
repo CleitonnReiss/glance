@@ -18,14 +18,21 @@ struct AboutSettingsPage: View {
     private let requiredTapCount = 5
     private let tapResetInterval: TimeInterval = 1.0
 
-    private var versionString: String {
+    private func versionString(lang: AppLanguage) -> String {
         let info = Bundle.main.infoDictionary
         let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(short) (\(build))"
+        let prefix: String
+        switch lang {
+        case .ptBR: prefix = "Versão"
+        case .es: prefix = "Versión"
+        case .en: prefix = "Version"
+        }
+        return "\(prefix) \(short) (\(build))"
     }
 
     var body: some View {
+        let lang = GlanceSettings.shared.appLanguage
         VStack(spacing: 2) {
             Image("appicon")
                 .resizable()
@@ -39,7 +46,7 @@ struct AboutSettingsPage: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(SettingsMetrics.textPrimary)
 
-            Text(versionString)
+            Text(versionString(lang: lang))
                 .font(.system(size: 12))
                 .foregroundStyle(SettingsMetrics.textSecondary)
         }
@@ -48,8 +55,8 @@ struct AboutSettingsPage: View {
 
         SettingsGroup {
             SettingsActionRowContent(
-                title: "Check for Updates",
-                buttonTitle: "Check",
+                title: L10n.string(.checkUpdatesTitle, lang: lang),
+                buttonTitle: L10n.string(.check, lang: lang),
                 isEnabled: updater.canCheckForUpdates
             ) {
                 updater.checkForUpdates()
@@ -57,15 +64,15 @@ struct AboutSettingsPage: View {
 
             SettingsGroupDivider()
 
-            SettingsRowContent(title: "Automatically check for updates") {
+            SettingsRowContent(title: L10n.string(.autoCheckUpdatesTitle, lang: lang)) {
                 GlanceToggle(isOn: $updater.automaticallyChecksForUpdates)
             }
 
             SettingsGroupDivider()
 
             SettingsActionRowContent(
-                title: "Send Feedback",
-                buttonTitle: "Send"
+                title: L10n.string(.sendFeedbackTitle, lang: lang),
+                buttonTitle: L10n.string(.send, lang: lang)
             ) {
                 if let url = URL(string: "https://tryglance.app/feedback") {
                     NSWorkspace.shared.open(url)
@@ -75,8 +82,8 @@ struct AboutSettingsPage: View {
 
         SettingsGroup {
             SettingsActionRowContent(
-                title: "Reset Configuration",
-                buttonTitle: "Reset"
+                title: L10n.string(.resetConfigTitle, lang: lang),
+                buttonTitle: L10n.string(.reset, lang: lang)
             ) {
                 AppResetter.promptResetAndReconfigure {
                     if let appDelegate = NSApp.delegate as? AppDelegate {
@@ -88,8 +95,8 @@ struct AboutSettingsPage: View {
             SettingsGroupDivider()
 
             SettingsActionRowContent(
-                title: "Uninstall Glance",
-                buttonTitle: "Uninstall"
+                title: L10n.string(.uninstallAppTitle, lang: lang),
+                buttonTitle: L10n.string(.uninstall, lang: lang)
             ) {
                 AppResetter.promptUninstall()
             }

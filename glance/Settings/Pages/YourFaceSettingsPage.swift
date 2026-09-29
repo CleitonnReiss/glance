@@ -12,6 +12,7 @@ import SwiftUI
 struct YourFaceSettingsPage: View {
     let environment: AppEnvironment
     @ObservedObject private var store = FaceEnrollmentStore.shared
+    @ObservedObject private var settings = GlanceSettings.shared
 
     @State private var sessionError: String?
     @State private var isUnlocking = false
@@ -46,23 +47,24 @@ struct YourFaceSettingsPage: View {
     }
 
     var body: some View {
+        let lang = settings.appLanguage
         ZStack(alignment: .top) {
-            lockedState
+            lockedState(lang: lang)
                 .opacity(stateKind == .locked ? 1 : 0)
                 .allowsHitTesting(stateKind == .locked)
                 .accessibilityHidden(stateKind != .locked)
 
-            unreadableState
+            unreadableState(lang: lang)
                 .opacity(stateKind == .unreadable ? 1 : 0)
                 .allowsHitTesting(stateKind == .unreadable)
                 .accessibilityHidden(stateKind != .unreadable)
 
-            notEnrolledState
+            notEnrolledState(lang: lang)
                 .opacity(stateKind == .notEnrolled ? 1 : 0)
                 .allowsHitTesting(stateKind == .notEnrolled)
                 .accessibilityHidden(stateKind != .notEnrolled)
 
-            enrolledState
+            enrolledState(lang: lang)
                 .opacity(stateKind == .enrolled ? 1 : 0)
                 .allowsHitTesting(stateKind == .enrolled)
                 .accessibilityHidden(stateKind != .enrolled)
@@ -76,7 +78,7 @@ struct YourFaceSettingsPage: View {
             store.reloadIfUnlocked()
         }
         .confirmationDialog(
-            "Delete this enrolled face?",
+            L10n.string(.deleteFacePrompt, lang: lang),
             isPresented: Binding(
                 get: { identityPendingDeletion != nil },
                 set: { if !$0 { identityPendingDeletion = nil } }
@@ -84,20 +86,20 @@ struct YourFaceSettingsPage: View {
             titleVisibility: .visible,
             presenting: identityPendingDeletion
         ) { identity in
-            Button("Delete", role: .destructive) { delete(identity) }
-            Button("Cancel", role: .cancel) { identityPendingDeletion = nil }
+            Button(L10n.string(.delete, lang: lang), role: .destructive) { delete(identity) }
+            Button(L10n.string(.cancel, lang: lang), role: .cancel) { identityPendingDeletion = nil }
         } message: { identity in
-            Text("\"\(identity.name)\" will stop being recognized until you enroll them again.")
+            Text(L10n.string(.deleteFaceMessage, lang: lang, identity.name))
         }
     }
 
     // MARK: - Locked
 
-    private var lockedState: some View {
+    private func lockedState(lang: AppLanguage) -> some View {
         SettingsEmptyStateView(
             icon: "lock.fill",
-            message: "Session locked",
-            buttonTitle: isUnlocking ? "Authenticating…" : "Unlock session",
+            message: L10n.string(.sessionLocked, lang: lang),
+            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
             isButtonEnabled: !isUnlocking,
             caption: sessionError,
             action: unlock
@@ -109,20 +111,20 @@ struct YourFaceSettingsPage: View {
     /// Session open but the encrypted store didn't decrypt. Deliberately
     /// offers no enroll or delete action, since a write here would replace
     /// faces still on disk.
-    private var unreadableState: some View {
+    private func unreadableState(lang: AppLanguage) -> some View {
         VStack(spacing: SettingsMetrics.emptyStateSpacing) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: SettingsMetrics.emptyStateIconSize, weight: .regular))
                 .foregroundStyle(SettingsMetrics.qualityFairColor)
 
-            Text("Enrolled faces couldn't be read")
+            Text(L10n.string(.faceLoadErrorTitle, lang: lang))
                 .font(SettingsMetrics.rowFont)
                 .foregroundStyle(SettingsMetrics.textSecondary)
 
-            SettingsCaption(text: store.loadFailure ?? "The stored data couldn't be decrypted with this session key.")
+            SettingsCaption(text: store.loadFailure ?? L10n.string(.faceLoadErrorDefault, lang: lang))
                 .multilineTextAlignment(.center)
 
-            SettingsCaption(text: "Nothing has been deleted, and Glance will not overwrite it — enrolling is blocked until this resolves. Quit and reopen Glance to retry. If it keeps failing, the session key no longer matches this data: remove the stored password on the Password tab to clear both, then set up again.")
+            SettingsCaption(text: L10n.string(.faceLoadRecoveryNotice, lang: lang))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, minHeight: SettingsMetrics.emptyStateMinHeight)
@@ -130,11 +132,11 @@ struct YourFaceSettingsPage: View {
 
     // MARK: - Not enrolled
 
-    private var notEnrolledState: some View {
+    private func notEnrolledState(lang: AppLanguage) -> some View {
         SettingsEmptyStateView(
             icon: "faceid",
-            message: "Face enrollment",
-            buttonTitle: "Set up Face Unlock",
+            message: L10n.string(.notEnrolledTitle, lang: lang),
+            buttonTitle: L10n.string(.setupFaceUnlockBtn, lang: lang),
             isButtonEnabled: !enrollmentFlowIsRunning,
             action: { OnboardingController.startEnrollmentOnly() }
         )
@@ -142,10 +144,10 @@ struct YourFaceSettingsPage: View {
 
     // MARK: - Enrolled
 
-    private var enrolledState: some View {
+    private func enrolledState(lang: AppLanguage) -> some View {
         VStack(alignment: .leading, spacing: SettingsMetrics.rowSpacing) {
-            faceEncryptedCard
-            identitiesHeader
+            faceEncryptedCard(lang: lang)
+            identitiesHeader(lang: lang)
             .padding(.bottom, -8)
 
             ForEach(store.identities) { identity in
@@ -160,7 +162,7 @@ struct YourFaceSettingsPage: View {
             }
 
             if !store.identities.isEmpty && store.activeIdentities.isEmpty {
-                SettingsCaption(text: "No identities are enabled — face unlock won't recognize anyone until you switch one back on.")
+                SettingsCaption(text: L10n.string(.noIdentitiesEnabledNotice, lang: lang))
             }
 
             if let writeError {
@@ -171,11 +173,11 @@ struct YourFaceSettingsPage: View {
 
     /// Mirrors the Password page's "Password encrypted" row — both refer to
     /// the same session key.
-    private var faceEncryptedCard: some View {
+    private func faceEncryptedCard(lang: AppLanguage) -> some View {
         SettingsGroup {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Text("Face encrypted")
+                    Text(L10n.string(.faceEncryptedTitle, lang: lang))
                         .font(SettingsMetrics.rowFont)
                         .foregroundStyle(SettingsMetrics.textPrimary)
                     Spacer(minLength: 8)
@@ -184,7 +186,7 @@ struct YourFaceSettingsPage: View {
                         .foregroundStyle(SettingsMetrics.textSecondary)
                 }
 
-                Text("Enroll separate identities to use Glance with multiple people, accessories (ex. glasses), facial expressions, or new lighting environments. This improves recognition quality.")
+                Text(L10n.string(.faceEncryptedDescription, lang: lang))
                     .font(.system(size: 12))
                     .foregroundStyle(SettingsMetrics.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -195,9 +197,9 @@ struct YourFaceSettingsPage: View {
         }
     }
 
-    private var identitiesHeader: some View {
+    private func identitiesHeader(lang: AppLanguage) -> some View {
         HStack(spacing: 0) {
-            SettingsSectionTitle(text: "Identities")
+            SettingsSectionTitle(text: L10n.string(.identitiesTitle, lang: lang))
 
             Button {
                 OnboardingController.startAddIdentity()
@@ -211,7 +213,7 @@ struct YourFaceSettingsPage: View {
             .buttonStyle(.plain)
             .disabled(enrollmentFlowIsRunning)
             .opacity(enrollmentFlowIsRunning ? 0.4 : 1)
-            .help("Enroll another face")
+            .help(L10n.string(.addFaceHelp, lang: lang))
             .padding(.trailing, SettingsMetrics.sectionTitleHorizontalInset)
             .padding(.top, SettingsMetrics.sectionTitleVerticalPadding)
         }
@@ -251,7 +253,7 @@ struct YourFaceSettingsPage: View {
         Task {
             do {
                 try await Task.detached(priority: .userInitiated) {
-                    try SecureCredentialManager.unlockSession(reason: "Authenticate to view your enrolled face")
+                    try SecureCredentialManager.unlockSession(reason: L10n.string(.authReasonViewFace))
                 }.value
                 store.reloadIfUnlocked()
             } catch {
@@ -294,12 +296,13 @@ private struct IdentityCard: View {
     /// An enrollment saved before per-sample quality existed reports "not
     /// recorded" rather than a misleading 100%.
     private var qualityCaption: String {
-        if identity.samples.isEmpty { return "No samples captured" }
-        if ratedCount == 0 { return "Capture quality • not recorded" }
-        return "Capture quality • \(qualityPercentage)%"
+        if identity.samples.isEmpty { return L10n.string(.noSamplesCaptured) }
+        if ratedCount == 0 { return L10n.string(.qualityNotRecorded) }
+        return L10n.string(.qualityPercent, qualityPercentage)
     }
 
     var body: some View {
+        let lang = GlanceSettings.shared.appLanguage
         SettingsGroup {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 8) {
@@ -318,11 +321,11 @@ private struct IdentityCard: View {
                         QualityTickStrip(samples: identity.samples)
                         .padding(.leading, 2)
                         Spacer(minLength: 12)
-                        PillActionButton(title: "Recapture", action: recapture)
+                        PillActionButton(title: L10n.string(.recaptureBtn, lang: lang), action: recapture)
                             .disabled(!canStartFlow)
                             .opacity(canStartFlow ? 1 : 0.4)
                         PillIconButton(systemImage: "trash", action: delete)
-                            .help("Delete \(identity.name)")
+                            .help(L10n.string(.deleteFaceBtnHelp, lang: lang, identity.name))
                     }
                 }
                 // Dimmed rather than hidden while switched off: the person
@@ -330,7 +333,7 @@ private struct IdentityCard: View {
                 .opacity(isEnabled ? 1 : 0.45)
 
                 if isStale {
-                    Text("Captured with a different recognition model — recapture before this face can unlock your Mac.")
+                    Text(L10n.string(.differentModelWarning, lang: lang))
                         .font(.system(size: 11))
                         .foregroundStyle(SettingsMetrics.qualityFairColor)
                         .fixedSize(horizontal: false, vertical: true)

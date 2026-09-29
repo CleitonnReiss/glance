@@ -21,6 +21,11 @@ rm -rf "$PKG_ROOT"
 mkdir -p "$PKG_ROOT/Applications"
 cp -R build/Glance.app "$PKG_ROOT/Applications/"
 
+find "$PKG_ROOT" -type d -exec chmod 755 {} +
+find "$PKG_ROOT" -type f -exec chmod 644 {} +
+chmod 755 "$PKG_ROOT/Applications/Glance.app/Contents/MacOS/Glance"
+find "$PKG_ROOT/Applications/Glance.app/Contents/Frameworks" -type f -perm +111 -exec chmod 755 {} + 2>/dev/null || true
+
 PKG_PLIST="build/components.plist"
 pkgbuild --analyze --root "$PKG_ROOT" "$PKG_PLIST"
 # Set BundleIsRelocatable to false so PackageKit never relocates to developer or scratch directories
@@ -41,6 +46,20 @@ cat << 'EOF' > "$PKG_SCRIPTS/postinstall"
 #!/bin/bash
 # Remove quarantine attributes so Gatekeeper never displays warning on launch
 xattr -cr /Applications/Glance.app 2>/dev/null || true
+
+# Fix ownership: assign bundle to current console user instead of root:wheel
+CONSOLE_USER=$(stat -f '%Su' /dev/console 2>/dev/null || echo "$USER")
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    chown -R "$CONSOLE_USER":staff /Applications/Glance.app 2>/dev/null || true
+fi
+
+# Ensure all directories are 755 and all files are readable
+chmod -R u+rwX,go+rX /Applications/Glance.app 2>/dev/null || true
+find /Applications/Glance.app -type d -exec chmod 755 {} + 2>/dev/null || true
+find /Applications/Glance.app -type f -exec chmod 644 {} + 2>/dev/null || true
+chmod 755 /Applications/Glance.app/Contents/MacOS/Glance 2>/dev/null || true
+find /Applications/Glance.app/Contents/Frameworks -type f -perm +111 -exec chmod 755 {} + 2>/dev/null || true
+
 # Register bundle with LaunchServices so it shows up in Applications and Launchpad immediately
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Glance.app 2>/dev/null || true
 exit 0

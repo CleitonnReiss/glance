@@ -97,15 +97,15 @@ enum EnrollmentPose: Int, CaseIterable {
 
     var instruction: String {
         switch self {
-        case .center: return "Look straight at the camera"
-        case .left: return "Turn your head slightly left"
-        case .topLeft: return "Turn your head to the top left"
-        case .top: return "Turn your head slightly up"
-        case .topRight: return "Turn your head to the top right"
-        case .right: return "Turn your head slightly right"
-        case .bottomRight: return "Turn your head to the bottom right"
-        case .bottom: return "Turn your head slightly down"
-        case .bottomLeft: return "Turn your head to the bottom left"
+        case .center: return L10n.string(.poseCenter)
+        case .left: return L10n.string(.poseLeft)
+        case .topLeft: return L10n.string(.poseTopLeft)
+        case .top: return L10n.string(.poseTop)
+        case .topRight: return L10n.string(.poseTopRight)
+        case .right: return L10n.string(.poseRight)
+        case .bottomRight: return L10n.string(.poseBottomRight)
+        case .bottom: return L10n.string(.poseBottom)
+        case .bottomLeft: return L10n.string(.poseBottomLeft)
         }
     }
 
@@ -431,8 +431,9 @@ final class OnboardingController: ObservableObject {
     /// Copy shown under the camera: pose guidance, a closer-up prompt, or the
     /// completion line.
     var enrollmentInstruction: String {
-        if enrollmentComplete { return "Face captured" }
-        if isTooFar { return "Bring your face closer" }
+        let lang = GlanceSettings.shared.appLanguage
+        if enrollmentComplete { return L10n.string(.enrollFaceCaptured, lang: lang) }
+        if isTooFar { return L10n.string(.enrollBringCloser, lang: lang) }
         return currentPose?.instruction ?? ""
     }
 
@@ -485,7 +486,10 @@ final class OnboardingController: ObservableObject {
 
     /// Naming is the last input in an add/recapture flow, but only the
     /// halfway point of first-run setup, where the password still follows.
-    var nameStepPrimaryTitle: String { isEnrollmentOnly ? "Save" : "Continue" }
+    var nameStepPrimaryTitle: String {
+        let lang = GlanceSettings.shared.appLanguage
+        return isEnrollmentOnly ? L10n.string(.save, lang: lang) : L10n.string(.continueBtn, lang: lang)
+    }
 
     // MARK: - Password
 
@@ -707,12 +711,13 @@ final class OnboardingController: ObservableObject {
     /// Text shown inside the pill: the explicitly chosen device's name, or the resolved
     /// system default's name suffixed "(Default)" when nothing's been picked yet.
     var cameraSelectionLabel: String {
+        let lang = GlanceSettings.shared.appLanguage
         if let id = GlanceSettings.shared.defaultCameraID,
            let device = cameraDevices.first(where: { $0.id == id }) {
             return device.name
         }
-        guard let name = resolveDefaultCameraDevice()?.localizedName else { return "System default" }
-        return "\(name) (Default)"
+        guard let name = resolveDefaultCameraDevice()?.localizedName else { return L10n.string(.systemDefaultCamera, lang: lang) }
+        return "\(name) (\(L10n.string(.cameraDefaultTitle, lang: lang)))"
     }
 
     /// Writes the pick straight into Settings — the same `defaultCameraID` the Camera
@@ -939,14 +944,15 @@ final class OnboardingController: ObservableObject {
     /// written yet — see `finish(password:)`.
     func confirmName() {
         let trimmed = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lang = GlanceSettings.shared.appLanguage
         guard !trimmed.isEmpty else {
-            nameError = "Enter a name."
+            nameError = L10n.string(.nameErrorEmpty, lang: lang)
             return
         }
         // Skipped silently in the full setup flow, where the store is still locked and
         // `identities` is unreadable, not empty. `finish(password:)` re-checks once open.
         guard !store.nameIsTaken(trimmed, excluding: enrollmentTarget.identityID) else {
-            nameError = "A face named \"\(trimmed)\" is already enrolled."
+            nameError = L10n.string(.nameErrorDuplicate, lang: lang, trimmed)
             return
         }
         nameError = nil
@@ -998,8 +1004,9 @@ final class OnboardingController: ObservableObject {
 
     func finish(password: String) async -> Bool {
         let trimmed = password
+        let lang = GlanceSettings.shared.appLanguage
         guard !trimmed.isEmpty else {
-            passwordError = "Enter a password."
+            passwordError = L10n.string(.passwordErrorEmpty, lang: lang)
             return false
         }
         isSavingPassword = true
@@ -1017,7 +1024,7 @@ final class OnboardingController: ObservableObject {
                 let name = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
                 // The naming step couldn't run this check while the store was locked.
                 guard !store.nameIsTaken(name, excluding: enrollmentTarget.identityID) else {
-                    nameError = "A face named \"\(name)\" is already enrolled."
+                    nameError = L10n.string(.nameErrorDuplicate, lang: lang, name)
                     navDirection = .backward
                     withAnimation(OnboardingMetrics.stepAnimation) { step = .name }
                     return false

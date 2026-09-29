@@ -122,7 +122,14 @@ cat << 'EOF' > "$APP_DIR/Contents/Info.plist"
 </plist>
 EOF
 
-# 7. Codesign
+# 7. Normalize bundle permissions (directories 755, files 644, executables 755)
+echo "--- Normalizing bundle permissions ---"
+find "$APP_DIR" -type d -exec chmod 755 {} +
+find "$APP_DIR" -type f -exec chmod 644 {} +
+chmod 755 "$MACOS_DIR/Glance"
+find "$FRAMEWORKS_DIR" -type f -perm +111 -exec chmod 755 {} +
+
+# 8. Codesign
 echo "--- Codesigning Glance.app inside-out ---"
 xattr -cr "$APP_DIR"
 

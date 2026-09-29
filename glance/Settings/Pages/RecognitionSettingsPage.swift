@@ -42,10 +42,11 @@ struct RecognitionSettingsPage: View {
     // MARK: - Locked
 
     private var lockedState: some View {
-        SettingsEmptyStateView(
+        let lang = settings.appLanguage
+        return SettingsEmptyStateView(
             icon: "lock.fill",
-            message: "Session locked",
-            buttonTitle: isUnlocking ? "Authenticating…" : "Unlock session",
+            message: L10n.string(.sessionLocked, lang: lang),
+            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
             isButtonEnabled: !isUnlocking,
             caption: sessionError,
             action: unlock
@@ -55,10 +56,11 @@ struct RecognitionSettingsPage: View {
     // MARK: - Unlocked
 
     private var unlockedState: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let lang = settings.appLanguage
+        return VStack(alignment: .leading, spacing: 20) {
             SettingsGroup {
                 SettingsOptionSliderRowContent(
-                    title: "Match confidence",
+                    title: L10n.string(.matchConfidenceTitle, lang: lang),
                     stepLabels: MatchConfidenceLevel.allCases.map(\.title),
                     index: matchConfidenceIndex,
                     stopCount: MatchConfidenceLevel.allCases.count
@@ -67,7 +69,7 @@ struct RecognitionSettingsPage: View {
                 SettingsGroupDivider()
 
                 SettingsOptionSliderRowContent(
-                    title: "Detection distance",
+                    title: L10n.string(.detectionDistanceTitle, lang: lang),
                     stepLabels: DetectionDistanceLevel.allCases.map(\.title),
                     index: detectionDistanceIndex,
                     stopCount: DetectionDistanceLevel.allCases.count
@@ -75,11 +77,11 @@ struct RecognitionSettingsPage: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                SettingsSectionTitle(text: "Liveness")
+                SettingsSectionTitle(text: L10n.string(.livenessTitle, lang: lang))
                 SettingsGroup {
                     SettingsRowContent(
-                        title: "Liveness detection",
-                        subtitle: "Checks that you're a live person, not a photo. May increase unlock time.",
+                        title: L10n.string(.livenessToggleTitle, lang: lang),
+                        subtitle: L10n.string(.livenessToggleSubtitle, lang: lang),
                         subtitleMaxWidth: SettingsMetrics.rowSubtitleMaxWidth
                     ) {
                         GlanceToggle(isOn: $settings.livenessChecksEnabled)
@@ -142,9 +144,9 @@ private enum MatchConfidenceLevel: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .lessStrict: return "Less strict"
-        case .standard: return "Default"
-        case .moreStrict: return "More strict"
+        case .lessStrict: return L10n.string(.confLessStrict)
+        case .standard: return L10n.string(.confDefault)
+        case .moreStrict: return L10n.string(.confMoreStrict)
         }
     }
 
@@ -177,9 +179,9 @@ private enum DetectionDistanceLevel: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .close: return "Close"
-        case .standard: return "Default"
-        case .far: return "Far"
+        case .close: return L10n.string(.distClose)
+        case .standard: return L10n.string(.distDefault)
+        case .far: return L10n.string(.distFar)
         }
     }
 

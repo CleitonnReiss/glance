@@ -690,9 +690,10 @@ struct UnlockAnimationPicker: View {
     private static let previewHoldDuration: TimeInterval = 1.5
 
     var body: some View {
+        let lang = GlanceSettings.shared.appLanguage
         SettingsLabeledOptionRow(
-            title: "Style",
-            subtitle: "The animation that appears when unlocking your Mac"
+            title: L10n.string(.animationStyleTitle, lang: lang),
+            subtitle: L10n.string(.animationStyleSubtitle, lang: lang)
         ) {
             ForEach(UnlockAnimationStyle.selectableCases) { style in
                 SettingsOptionTile(
@@ -778,9 +779,10 @@ struct LivenessModePicker: View {
     var isEnabled: Bool = true
 
     var body: some View {
+        let lang = GlanceSettings.shared.appLanguage
         SettingsLabeledOptionRow(
-            title: "Strength",
-            subtitle: "Light includes basic protection. Heavy requires you to blink or slightly move your head."
+            title: L10n.string(.livenessModeTitle, lang: lang),
+            subtitle: L10n.string(.livenessModeSubtitle, lang: lang)
         ) {
             ForEach(LivenessMode.allCases) { mode in
                 SettingsOptionTile(
@@ -819,7 +821,11 @@ struct UnlockTriggerPicker: View {
     var isEnabled: Bool = true
 
     var body: some View {
-        SettingsLabeledOptionRow(title: "Triggers", subtitle: "Select multiple") {
+        let lang = GlanceSettings.shared.appLanguage
+        SettingsLabeledOptionRow(
+            title: L10n.string(.triggersTitle, lang: lang),
+            subtitle: L10n.string(.triggersSubtitle, lang: lang)
+        ) {
             ForEach(UnlockTrigger.allCases) { trigger in
                 let isSelected = selection.contains(trigger)
                 SettingsOptionTile(

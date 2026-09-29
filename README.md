@@ -103,6 +103,7 @@ Para baixar, instalar e abrir o Glance automaticamente sem bloqueio do Gatekeepe
 | **Auto-locking sessions** | The Touch ID session re-locks itself after an idle period you choose, so an unattended Mac doesn't stay authorized forever. |
 | **Trackpad haptics** | Hovering over the notch will trigger haptics |
 | **Notchless Mac support** | Macs without a notch will be replaced with a pill-shape, dynamic island style design. |
+| **Multi-Language (PT-BR, EN, ES)** | Live language switching in Settings supporting Brazilian Portuguese, English, and Spanish. |
 | **Your data, your call** | Edit or delete your enrolment or stored password at any time. The encrypted files are removed immediately. |
 
 ---

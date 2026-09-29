@@ -20,6 +20,7 @@ struct SettingsTabBar: View {
     /// Whether the Face Lab tab should render — see
     /// `AppEnvironment.isDebugSectionRevealed`. This view only reflects it.
     let isDebugSectionRevealed: Bool
+    @ObservedObject private var settings = GlanceSettings.shared
 
     /// Every visible tab's measured frame, keyed by tab — read back via
     /// `TabFramePreferenceKey` from each item's own `GeometryReader`.

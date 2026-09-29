@@ -63,10 +63,11 @@ struct PasswordSettingsPage: View {
     // MARK: - No password stored
 
     private var noPasswordState: some View {
-        SettingsEmptyStateView(
+        let lang = settings.appLanguage
+        return SettingsEmptyStateView(
             icon: "lock.fill",
-            message: "Set up a password",
-            buttonTitle: "Set password",
+            message: L10n.string(.noPasswordTitle, lang: lang),
+            buttonTitle: L10n.string(.setPasswordBtn, lang: lang),
             caption: statusMessage,
             action: { OnboardingController.startPasswordOnly() }
         )
@@ -75,10 +76,11 @@ struct PasswordSettingsPage: View {
     // MARK: - Locked
 
     private var lockedState: some View {
-        SettingsEmptyStateView(
+        let lang = settings.appLanguage
+        return SettingsEmptyStateView(
             icon: "lock.fill",
-            message: "Session locked",
-            buttonTitle: isUnlocking ? "Authenticating…" : "Unlock session",
+            message: L10n.string(.sessionLocked, lang: lang),
+            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
             isButtonEnabled: !isUnlocking,
             caption: sessionError,
             action: unlock
@@ -88,9 +90,10 @@ struct PasswordSettingsPage: View {
     // MARK: - Unlocked
 
     private var unlockedState: some View {
-        VStack(alignment: .leading, spacing: SettingsMetrics.rowSpacing) {
+        let lang = settings.appLanguage
+        return VStack(alignment: .leading, spacing: SettingsMetrics.rowSpacing) {
             SettingsGroup {
-                SettingsRowContent(title: "Password encrypted") {
+                SettingsRowContent(title: L10n.string(.passwordEncryptedTitle, lang: lang)) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(SettingsMetrics.textSecondary)
@@ -99,7 +102,7 @@ struct PasswordSettingsPage: View {
                 SettingsGroupDivider()
 
                 SettingsSteppedSliderRowContent(
-                    title: "Auto lock session",
+                    title: L10n.string(.autoLockTitle, lang: lang),
                     valueLabel: settings.autoLockInterval.title,
                     index: Binding(
                         get: { settings.autoLockInterval.sliderIndex },
@@ -110,16 +113,16 @@ struct PasswordSettingsPage: View {
 
                 SettingsGroupDivider()
 
-                SettingsRowContent(title: "Change password") {
-                    SettingsPrimaryButton(title: "Change", compact: true) {
+                SettingsRowContent(title: L10n.string(.changePasswordTitle, lang: lang)) {
+                    SettingsPrimaryButton(title: L10n.string(.changePasswordBtn, lang: lang), compact: true) {
                         OnboardingController.startPasswordOnly()
                     }
                 }
 
                 SettingsGroupDivider()
 
-                SettingsRowContent(title: "Remove password") {
-                    HoldToConfirmButton(title: "Remove", action: removePassword)
+                SettingsRowContent(title: L10n.string(.removePasswordTitle, lang: lang)) {
+                    HoldToConfirmButton(title: L10n.string(.removePasswordBtn, lang: lang), action: removePassword)
                 }
             }
 

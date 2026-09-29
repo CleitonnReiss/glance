@@ -53,10 +53,11 @@ struct CameraSettingsPage: View {
     // MARK: - Locked
 
     private var lockedState: some View {
-        SettingsEmptyStateView(
+        let lang = settings.appLanguage
+        return SettingsEmptyStateView(
             icon: "lock.fill",
-            message: "Session locked",
-            buttonTitle: isUnlocking ? "Authenticating…" : "Unlock session",
+            message: L10n.string(.sessionLocked, lang: lang),
+            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
             isButtonEnabled: !isUnlocking,
             caption: sessionError,
             action: unlock
@@ -66,18 +67,19 @@ struct CameraSettingsPage: View {
     // MARK: - Unlocked
 
     private var unlockedState: some View {
-        VStack(alignment: .leading, spacing: SettingsMetrics.rowSpacing) {
+        let lang = settings.appLanguage
+        return VStack(alignment: .leading, spacing: SettingsMetrics.rowSpacing) {
             SettingsGroup {
-                cameraPicker(title: "Default", selection: $settings.defaultCameraID)
+                cameraPicker(title: L10n.string(.cameraDefaultTitle, lang: lang), selection: $settings.defaultCameraID, lang: lang)
                 SettingsGroupDivider()
-                cameraPicker(title: "Built-in display", selection: $settings.builtInDisplayCameraID)
+                cameraPicker(title: L10n.string(.cameraBuiltInTitle, lang: lang), selection: $settings.builtInDisplayCameraID, lang: lang)
                 SettingsGroupDivider()
-                cameraPicker(title: "External display", selection: $settings.externalDisplayCameraID)
+                cameraPicker(title: L10n.string(.cameraExternalTitle, lang: lang), selection: $settings.externalDisplayCameraID, lang: lang)
             }
 
-            SettingsSectionTitle(text: "Preview")
+            SettingsSectionTitle(text: L10n.string(.previewTitle, lang: lang))
             .padding(.bottom, -4)
-            previewArea
+            previewArea(lang: lang)
                 .frame(height: 220)
                 .clipShape(RoundedRectangle(cornerRadius: SettingsMetrics.rowRadius))
                 .overlay(
@@ -97,13 +99,13 @@ struct CameraSettingsPage: View {
     /// Live feed, or a placeholder until "Show preview" is tapped — opening
     /// this page alone should never request camera access.
     @ViewBuilder
-    private var previewArea: some View {
+    private func previewArea(lang: AppLanguage) -> some View {
         if isPreviewShown {
             CameraPreviewView(session: previewCamera.session, faces: [])
         } else {
             ZStack {
                 SettingsMetrics.rowColor
-                SettingsPrimaryButton(title: "Show preview", action: showPreview)
+                SettingsPrimaryButton(title: L10n.string(.showPreviewBtn, lang: lang), action: showPreview)
             }
         }
     }
@@ -128,10 +130,10 @@ struct CameraSettingsPage: View {
         Task { await previewCamera.start() }
     }
 
-    private func cameraPicker(title: String, selection: Binding<String?>) -> some View {
+    private func cameraPicker(title: String, selection: Binding<String?>, lang: AppLanguage) -> some View {
         SettingsRowContent(title: title) {
-            SettingsMenuPickerPill(label: cameraLabel(for: selection.wrappedValue)) {
-                Button("System default") { selection.wrappedValue = nil }
+            SettingsMenuPickerPill(label: cameraLabel(for: selection.wrappedValue, lang: lang)) {
+                Button(L10n.string(.systemDefaultCamera, lang: lang)) { selection.wrappedValue = nil }
                 ForEach(devices) { device in
                     Button(device.name) { selection.wrappedValue = device.id }
                 }
@@ -144,9 +146,9 @@ struct CameraSettingsPage: View {
         devices = CameraDeviceCatalog.availableDevices()
     }
 
-    private func cameraLabel(for id: String?) -> String {
+    private func cameraLabel(for id: String?, lang: AppLanguage) -> String {
         guard let id, let device = devices.first(where: { $0.id == id }) else {
-            return "System default"
+            return L10n.string(.systemDefaultCamera, lang: lang)
         }
         return device.name
     }

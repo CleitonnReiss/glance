@@ -78,8 +78,8 @@ enum LivenessMode: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .light: return "Light"
-        case .heavy: return "Heavy"
+        case .light: return L10n.string(.livenessLight)
+        case .heavy: return L10n.string(.livenessHeavy)
         }
     }
 
