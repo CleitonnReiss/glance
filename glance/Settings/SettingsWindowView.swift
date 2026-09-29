@@ -131,8 +131,6 @@ struct SettingsWindowView: View {
                 .buttonStyle(.plain)
                 .help("Refresh camera list")
             }
-
-            SessionLockButton(pocController: environment.pocController)
         }
         .padding(.horizontal, SettingsMetrics.contentHorizontalPadding)
         .frame(height: SettingsMetrics.headerHeight)

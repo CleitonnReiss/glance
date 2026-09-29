@@ -54,7 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Kept alive for the app's lifetime — a local variable would vanish (and the icon with it) once `applicationDidFinishLaunching` returns.
     private var statusItem: NSStatusItem?
     private var lockScreenMenuItem: NSMenuItem?
-    private var sessionMenuItem: NSMenuItem?
     private var settingsMenuItem: NSMenuItem?
     private var resetMenuItem: NSMenuItem?
     private var uninstallMenuItem: NSMenuItem?
@@ -92,13 +91,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(lockScreenItem)
         lockScreenMenuItem = lockScreenItem
 
-        menu.addItem(NSMenuItem.separator())
-
-        let sessionItem = NSMenuItem(title: "", action: #selector(toggleSession), keyEquivalent: "")
-        sessionItem.target = self
-        menu.addItem(sessionItem)
-        sessionMenuItem = sessionItem
-
         let settingsItem = NSMenuItem(title: L10n.string(.menuSettings, lang: lang), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.image = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: nil)
@@ -129,8 +121,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         statusItem = item
 
-        updateSessionMenuItem(lang: lang)
-
         // SwiftUI can flip the app back to `.regular` while installing scenes even with `.suppressed`; re-assert accessory.
         NSApp.setActivationPolicy(.accessory)
 
@@ -149,7 +139,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Automatically restore session if valid so face unlock is immediately armed
         SecureCredentialManager.tryRestoreSession()
         environment.pocController.refreshCredentialStatus()
-        updateSessionMenuItem()
 
         NotificationCenter.default.addObserver(
             forName: .secureCredentialSessionDidChange,
@@ -158,7 +147,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.environment.pocController.refreshCredentialStatus()
-                self?.updateSessionMenuItem()
             }
         }
 
@@ -211,17 +199,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Reachable from launch (onboarding already done) or from first-run completion — `hasStartedUpdater` collapses both into "exactly once."
+    /// Updates disabled.
     private func startUpdaterIfNeeded() {
         guard !hasStartedUpdater else { return }
         hasStartedUpdater = true
-        environment.updater.start()
     }
 
     /// Hides the Dock icon once no `canBecomeMain` window is left (`revealSettingsWindow()` brings it back) — excludes non-main
-    /// windows like the lock-screen notch overlay, and backs off while Sparkle's update window is showing.
+    /// windows like the lock-screen notch overlay.
     @objc private func windowWillClose(_ notification: Notification) {
         guard let closingWindow = notification.object as? NSWindow, closingWindow.canBecomeMain else { return }
-        guard !environment.updater.isPresentingUpdateUI else { return }
         let stillOpen = NSApp.windows.contains { $0 !== closingWindow && $0.canBecomeMain && $0.isVisible }
         guard !stillOpen else { return }
         NSApp.setActivationPolicy(.accessory)
@@ -235,7 +222,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         resetMenuItem?.title = L10n.string(.menuReset, lang: lang)
         uninstallMenuItem?.title = L10n.string(.menuUninstall, lang: lang)
         quitMenuItem?.title = L10n.string(.menuQuit, lang: lang)
-        updateSessionMenuItem(lang: lang)
     }
 
     @objc private func lockMacScreen() {
@@ -246,31 +232,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 lock()
             }
             dlclose(lib)
-        }
-    }
-
-    private func updateSessionMenuItem(lang: AppLanguage = AppLanguage.current) {
-        guard let sessionMenuItem else { return }
-        let isUnlocked = environment.pocController.isSessionUnlocked
-        sessionMenuItem.title = isUnlocked
-            ? L10n.string(.menuVaultUnlocked, lang: lang)
-            : L10n.string(.menuVaultLocked, lang: lang)
-        sessionMenuItem.image = NSImage(
-            systemSymbolName: isUnlocked ? "key.fill" : "lock.fill",
-            accessibilityDescription: nil
-        )
-    }
-
-    /// Locking is immediate; unlocking prompts Touch ID, so this can't be a plain synchronous action for that branch.
-    @objc private func toggleSession() {
-        guard !isBlockedByPostUpdateNotice else {
-            presentPostUpdateSecurityNotice()
-            return
-        }
-        if environment.pocController.isSessionUnlocked {
-            environment.pocController.lockSession()
-        } else {
-            Task { await environment.pocController.unlockSession() }
         }
     }
 

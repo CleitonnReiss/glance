@@ -28,7 +28,7 @@ struct PasswordSettingsPage: View {
 
     private var pageState: PageState {
         guard pocController.hasStoredPassword else { return .noPassword }
-        return isSessionUnlocked ? .unlocked : .locked
+        return .unlocked
     }
 
     var body: some View {
@@ -102,18 +102,6 @@ struct PasswordSettingsPage: View {
                         .font(.system(size: 12))
                         .foregroundStyle(SettingsMetrics.textSecondary)
                 }
-
-                SettingsGroupDivider()
-
-                SettingsSteppedSliderRowContent(
-                    title: L10n.string(.autoLockTitle, lang: lang),
-                    valueLabel: settings.autoLockInterval.title,
-                    index: Binding(
-                        get: { settings.autoLockInterval.sliderIndex },
-                        set: { settings.autoLockInterval = .from(sliderIndex: $0) }
-                    ),
-                    stopCount: AutoLockInterval.allCases.count
-                )
 
                 SettingsGroupDivider()
 

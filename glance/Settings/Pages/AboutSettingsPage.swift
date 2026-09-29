@@ -20,15 +20,14 @@ struct AboutSettingsPage: View {
 
     private func versionString(lang: AppLanguage) -> String {
         let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         let prefix: String
         switch lang {
         case .ptBR: prefix = "Versão"
         case .es: prefix = "Versión"
         case .en: prefix = "Version"
         }
-        return "\(prefix) \(short) (\(build))"
+        return "\(prefix) \(short)"
     }
 
     var body: some View {
@@ -54,22 +53,6 @@ struct AboutSettingsPage: View {
         .padding(.bottom, 16)
 
         SettingsGroup {
-            SettingsActionRowContent(
-                title: L10n.string(.checkUpdatesTitle, lang: lang),
-                buttonTitle: L10n.string(.check, lang: lang),
-                isEnabled: updater.canCheckForUpdates
-            ) {
-                updater.checkForUpdates()
-            }
-
-            SettingsGroupDivider()
-
-            SettingsRowContent(title: L10n.string(.autoCheckUpdatesTitle, lang: lang)) {
-                GlanceToggle(isOn: $updater.automaticallyChecksForUpdates)
-            }
-
-            SettingsGroupDivider()
-
             SettingsActionRowContent(
                 title: L10n.string(.sendFeedbackTitle, lang: lang),
                 buttonTitle: L10n.string(.send, lang: lang)
