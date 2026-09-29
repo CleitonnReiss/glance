@@ -117,12 +117,28 @@ private struct SettingsTabGlyph: View {
                 Image(systemName: name)
                     .font(.system(size: SettingsMetrics.tabGlyphSize, weight: .medium))
             case .asset(let name):
-                Image(name)
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: SettingsMetrics.tabGlyphSize + 1, height: SettingsMetrics.tabGlyphSize + 1)
-                    .offset(y: 1)
+                if let nsImg = NSImage(named: name) ?? Bundle.main.image(forResource: name) {
+                    Image(nsImage: nsImg)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: SettingsMetrics.tabGlyphSize + 1, height: SettingsMetrics.tabGlyphSize + 1)
+                        .offset(y: 1)
+                } else if name == "YourFaceIcon" {
+                    Image(nsImage: GlanceIcons.yourFaceIcon(size: SettingsMetrics.tabGlyphSize + 1))
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: SettingsMetrics.tabGlyphSize + 1, height: SettingsMetrics.tabGlyphSize + 1)
+                        .offset(y: 1)
+                } else {
+                    Image(name)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: SettingsMetrics.tabGlyphSize + 1, height: SettingsMetrics.tabGlyphSize + 1)
+                        .offset(y: 1)
+                }
             }
         }
         // Fixed box so glyphs of different widths space evenly along the bar.

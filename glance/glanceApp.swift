@@ -61,15 +61,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("Glance: applicationDidFinishLaunching")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        // Custom mark, not an SF Symbol; `isTemplate` is cheap insurance against a plain black-square render.
-        let icon = NSImage(named: "MenuBarIcon")
-        icon?.isTemplate = true
-        // A single-scale vector asset reports its design size with no scaling metadata, so left unset this renders ~10x too
-        // large; sized to match the standard menu bar glyph height, width following the asset's own aspect ratio.
-        if let iconSize = icon?.size, iconSize.height > 0 {
-            let menuBarHeight: CGFloat = 16
-            icon?.size = NSSize(width: menuBarHeight * iconSize.width / iconSize.height, height: menuBarHeight)
-        }
+        let icon = GlanceIcons.menuBarIcon()
+        icon.size = NSSize(width: 18, height: 18)
         item.button?.image = icon
 
         let menu = NSMenu()

@@ -19,7 +19,8 @@ Originalmente, o projeto exigia **macOS 15 (Sequoia)** devido ao uso intensivo d
 9. [Prevenção de Crash em Espaços de Cores Dinâmicos](#9-prevenção-de-crash-em-espaços-de-cores-dinâmicos)
 10. [Bloqueio Real de Tela do macOS (`Lock Screen`)](#10-bloqueio-real-de-tela-do-macos-lock-screen)
 11. [Injeção Confiável de Senha e Preservação de Acessibilidade no TCC](#11-injeção-confiável-de-senha-e-preservação-de-acessibilidade-no-tcc)
-12. [Scripts de Compilação e Geração de Instaladores](#12-scripts-de-compilação-e-geração-de-instaladores)
+12. [Compatibilidade do Ícone da Barra de Menus e Assets SVG](#12-compatibilidade-do-ícone-da-barra-de-menus-e-assets-svg)
+13. [Scripts de Compilação e Geração de Instaladores](#13-scripts-de-compilação-e-geração-de-instaladores)
 
 ---
 
@@ -163,7 +164,20 @@ Todas as classes de estado e modelos reativos foram convertidos para a conformid
 
 ---
 
-## 12. Scripts de Compilação e Geração de Instaladores
+## 12. Compatibilidade do Ícone da Barra de Menus e Assets SVG
+
+- **Problema**:
+  - No macOS 14/15, `NSImage` e SwiftUI possuem suporte automático a arquivos `.svg` do catálogo de assets.
+  - No **macOS 12 Monterey**, o AppKit **não** carrega imagens `.svg` diretamente via `NSImage(named:)` ou `NSImage(contentsOfFile:)`.
+  - Como resultado, a chamada `NSImage(named: "MenuBarIcon")` retornava `nil`. O macOS alocava o espaço de 22px na barra de menus, mas o botão ficava **completamente invisível** (embora clicável). O mesmo acontecia com o ícone `YourFaceIcon` na barra de abas das preferências.
+- **Solução Implementada**:
+  1. Criado o script [`tools/generate_icons.swift`](tools/generate_icons.swift) integrado ao build, que rasteriza o vetor exato do Glance em arquivos PNG com canal alfa real (`MenuBarIcon.png`, `MenuBarIcon@2x.png`, `YourFaceIcon.png`, `YourFaceIcon@2x.png`).
+  2. Criado o módulo [`glance/GlanceIcons.swift`](glance/GlanceIcons.swift), que fornece o renderizador vetorial nativo via `NSImage(size:flipped:drawingHandler:)`. Ele desenha os caminhos bézier do logo em CoreGraphics com `isTemplate = true`.
+  3. Atualizado o [`glance/glanceApp.swift`](glance/glanceApp.swift) e [`glance/Settings/SettingsTabBar.swift`](glance/Settings/SettingsTabBar.swift) para carregar o asset PNG com fallback vetorial direto. O ícone passa a ser exibido com total nitidez e adaptação dinâmica aos modos claro e escuro.
+
+---
+
+## 13. Scripts de Compilação e Geração de Instaladores
 
 Foram incluídos scripts prontos e independentes na raiz do projeto:
 

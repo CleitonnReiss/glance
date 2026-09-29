@@ -35,13 +35,17 @@ if [ ! -f "build/AppIcon.icns" ]; then
     iconutil -c icns build/AppIcon.iconset -o build/AppIcon.icns
 fi
 
-# 2. Precompile ArcFace.mlmodelc if needed
+# 2. Generate MenuBar and Tab PNG icons
+echo "--- Generating MenuBar and Tab PNG icons ---"
+swift tools/generate_icons.swift glance/Resources
+
+# 3. Precompile ArcFace.mlmodelc if needed
 if [ ! -d "build/ArcFace.mlmodelc" ]; then
     echo "--- Compiling ArcFace model to .mlmodelc ---"
     swift -target x86_64-apple-macos12.0 tools/compile_model.swift
 fi
 
-# 3. Compile Swift binary
+# 4. Compile Swift binary
 echo "--- Compiling Glance binary (x86_64-apple-macos12.0) ---"
 SWIFT_FILES=$(find glance -name "*.swift")
 
