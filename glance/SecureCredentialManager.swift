@@ -45,6 +45,10 @@ enum SecureCredentialManager {
     nonisolated private static let sessionKeyAccount = "sessionKey"
     nonisolated private static let passwordBlobAccount = "encryptedPassword"
 
+    // MARK: - Persistence Keys
+    private static let manuallyLockedKey = "glance_session_manually_locked"
+    private static let lastActivityTimestampKey = "glance_session_last_activity"
+
     // MARK: - Session state (thread-safe via NSLock)
 
     nonisolated private static let sessionLock = NSLock()
@@ -54,37 +58,94 @@ enum SecureCredentialManager {
     private static var _lastActivityAt: Date?
 
     nonisolated static var isSessionUnlocked: Bool {
+        tryRestoreSession()
         sessionLock.lock(); defer { sessionLock.unlock() }
         return _cachedKey != nil
     }
 
     /// `nil` whenever the session is locked — there is no activity to age.
     nonisolated static var lastActivityAt: Date? {
+        tryRestoreSession()
         sessionLock.lock(); defer { sessionLock.unlock() }
         return _lastActivityAt
     }
 
     nonisolated private static func cachedKey() -> SymmetricKey? {
+        tryRestoreSession()
         sessionLock.lock(); defer { sessionLock.unlock() }
         return _cachedKey
+    }
+
+    /// Automatically restores the session key from the macOS Keychain upon startup or login.
+    /// Since the user has logged into their Mac, their login Keychain is unlocked and available.
+    /// If the vault was not explicitly locked and the auto-lock timeout has not expired,
+    /// this seamlessly unwraps the session key without requiring manual re-unlock.
+    nonisolated static func tryRestoreSession() {
+        sessionLock.lock()
+        let alreadyUnlocked = (_cachedKey != nil)
+        sessionLock.unlock()
+        if alreadyUnlocked { return }
+
+        // If the user explicitly locked the vault, respect their decision until manual unlock
+        if UserDefaults.standard.bool(forKey: manuallyLockedKey) {
+            return
+        }
+
+        // Verify that credentials exist on disk
+        guard KeychainManager.exists(account: sessionKeyAccount) && KeychainManager.exists(account: passwordBlobAccount) else {
+            return
+        }
+
+        // Check if session has expired based on auto-lock duration
+        let lastTimestamp = UserDefaults.standard.double(forKey: lastActivityTimestampKey)
+        if lastTimestamp > 0 {
+            let lastDate = Date(timeIntervalSince1970: lastTimestamp)
+            let days = UserDefaults.standard.object(forKey: "GlanceSettings.autoLockIntervalDays") as? Int ?? 7
+            let idleLimit: TimeInterval = Double(days) * 24 * 3600
+            if Date().timeIntervalSince(lastDate) >= idleLimit {
+                return
+            }
+        }
+
+        do {
+            let data = try KeychainManager.read(account: sessionKeyAccount)
+            setCachedKey(SymmetricKey(data: data))
+            print("Glance: [SecureCredentialManager] Session key restored successfully from Keychain on startup")
+        } catch {
+            print("Glance: [SecureCredentialManager] Could not auto-restore session key: \(error)")
+        }
     }
 
     nonisolated private static func setCachedKey(_ key: SymmetricKey?) {
         sessionLock.lock()
         let changed = (key != nil) != (_cachedKey != nil)
         _cachedKey = key
-        _lastActivityAt = key == nil ? nil : Date()
+        let now = Date()
+        _lastActivityAt = key == nil ? nil : now
+        if key != nil {
+            UserDefaults.standard.set(now.timeIntervalSince1970, forKey: lastActivityTimestampKey)
+            UserDefaults.standard.set(false, forKey: manuallyLockedKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: lastActivityTimestampKey)
+        }
+        UserDefaults.standard.synchronize()
         sessionLock.unlock()
-        // Posted after releasing the lock — observers may call back into `isSessionUnlocked` (re-acquiring it) from a
-        // background thread, so posting while still locked risks a real self-deadlock, not a theoretical one.
+
         guard changed else { return }
-        NotificationCenter.default.post(name: .secureCredentialSessionDidChange, object: nil)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .secureCredentialSessionDidChange, object: nil)
+        }
     }
 
     /// Resets the idle countdown on each successful use, so an actively-used session never auto-locks.
     nonisolated private static func recordActivity() {
         sessionLock.lock()
-        if _cachedKey != nil { _lastActivityAt = Date() }
+        if _cachedKey != nil {
+            let now = Date()
+            _lastActivityAt = now
+            UserDefaults.standard.set(now.timeIntervalSince1970, forKey: lastActivityTimestampKey)
+            UserDefaults.standard.synchronize()
+        }
         sessionLock.unlock()
     }
 
@@ -124,6 +185,10 @@ enum SecureCredentialManager {
     nonisolated static func unlockSession(reason: String) throws {
         if cachedKey() != nil { return }
 
+        // User is actively unlocking the session; clear any manual lock state
+        UserDefaults.standard.set(false, forKey: manuallyLockedKey)
+        UserDefaults.standard.synchronize()
+
         // The existence check, not the read, decides whether a key gets created (load-bearing): a cancelled Touch ID prompt on
         // a user-presence item reports `errSecItemNotFound`, indistinguishable from no key — deciding on the read's error would
         // mint a fresh key (destroying the one that decrypts existing data) on every mis-tap.
@@ -161,8 +226,10 @@ enum SecureCredentialManager {
         KeychainManager.exists(account: passwordBlobAccount) || SecureFaceStore.exists
     }
 
-    /// Clears the cached session key. Next save/read requires Touch ID again.
+    /// Clears the cached session key and records that the user manually locked the vault.
     nonisolated static func lockSession() {
+        UserDefaults.standard.set(true, forKey: manuallyLockedKey)
+        UserDefaults.standard.synchronize()
         setCachedKey(nil)
     }
 
@@ -172,6 +239,9 @@ enum SecureCredentialManager {
         guard !passwordBytes.isEmpty else { throw SecureCredentialError.emptyPassword }
         let combined = try encrypt(passwordBytes)
         try KeychainManager.save(account: passwordBlobAccount, data: combined)
+        UserDefaults.standard.set(false, forKey: manuallyLockedKey)
+        UserDefaults.standard.synchronize()
+        recordActivity()
     }
 
     /// No separate Touch ID prompt — only the session key was gated, at unlock time. Caller MUST zero the returned bytes via
@@ -189,6 +259,9 @@ enum SecureCredentialManager {
     nonisolated static func deletePassword() throws {
         try KeychainManager.delete(account: passwordBlobAccount)
         try KeychainManager.delete(account: sessionKeyAccount)
+        UserDefaults.standard.removeObject(forKey: manuallyLockedKey)
+        UserDefaults.standard.removeObject(forKey: lastActivityTimestampKey)
+        UserDefaults.standard.synchronize()
         setCachedKey(nil)
     }
 }

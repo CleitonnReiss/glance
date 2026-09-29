@@ -32,24 +32,10 @@ enum AppResetter {
         }
 
         let defaults = UserDefaults.standard
-        let savedInode = defaults.object(forKey: inodeKey) as? UInt64
         let currentBirthtime = creationDate.timeIntervalSince1970
-
-        if let savedInode = savedInode {
-            // If the inode differs, the previous .app was deleted and replaced by a fresh install!
-            if savedInode != inode {
-                print("Glance: Detected new installation or reinstallation on disk (Inode \(savedInode) -> \(inode)). Resetting to factory defaults for clean onboarding.")
-                resetAllUserData(keepApplicationFile: true)
-                defaults.set(inode, forKey: inodeKey)
-                defaults.set(currentBirthtime, forKey: birthtimeKey)
-                defaults.synchronize()
-                return
-            }
-            // First run in /Applications - record bundle signature
-            defaults.set(inode, forKey: inodeKey)
-            defaults.set(currentBirthtime, forKey: birthtimeKey)
-            defaults.synchronize()
-        }
+        defaults.set(inode, forKey: inodeKey)
+        defaults.set(currentBirthtime, forKey: birthtimeKey)
+        defaults.synchronize()
     }
 
     private static var monitorTimer: Timer?

@@ -136,6 +136,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         AppResetter.verifyInstallationIntegrity()
         AppResetter.startBundleLifecycleMonitor()
 
+        // Automatically restore session if valid so face unlock is immediately armed
+        SecureCredentialManager.tryRestoreSession()
+        environment.pocController.refreshCredentialStatus()
+        updateSessionMenuItem()
+
+        NotificationCenter.default.addObserver(
+            forName: .secureCredentialSessionDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.environment.pocController.refreshCredentialStatus()
+                self?.updateSessionMenuItem()
+            }
+        }
+
         // Deferred until onboarding is done — Sparkle's own "Check for updates automatically?" consent alert fires the moment
         // it starts on a fresh install, and starting unconditionally here used to pop it mid-onboarding.
         if GlanceSettings.shared.hasCompletedOnboarding {

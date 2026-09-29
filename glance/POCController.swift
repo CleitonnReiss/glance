@@ -22,6 +22,18 @@ final class POCController: ObservableObject {
 
     @Published var statusMessage: String = "Idle"
 
+    init() {
+        NotificationCenter.default.addObserver(
+            forName: .secureCredentialSessionDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshCredentialStatus()
+            }
+        }
+    }
+
     func refreshAccessibilityStatus() {
         accessibilityGranted = KeystrokeInjector.isAccessibilityTrusted()
     }
