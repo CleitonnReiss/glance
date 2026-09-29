@@ -44,12 +44,21 @@ https://github.com/user-attachments/assets/77438826-80a9-4ab2-9fc3-42407a2d0adb
 ## Installation
 
 **Requirements:**
-- macOS 15 Sequoia or later
-- Apple Silicon or Intel Mac
+- macOS 12 Monterey or later (macOS 12.0+)
+- Intel (`x86_64`) or Apple Silicon (`arm64`) Mac
 
-<a href="https://github.com/jonnyoo/glance/releases/latest/download/Glance.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/cdb8af97-1ee2-4669-b7cb-dcfb56c9dd61" alt="Download for Mac" /></a>
+### Download:
 
-Open the `.dmg` file and drag Glance to `/Applications`, then open it.
+| Package | Format | Description | Link |
+|---|---|---|---|
+| **`Glance-macOS-Monterey.dmg`** | Disc Image (.dmg) | **Recommended**. Clean drag-and-drop installer. | [Download DMG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.dmg) |
+| **`Glance-macOS-Monterey.pkg`** | Native Installer (.pkg) | Guided 1-click macOS installer. | [Download PKG](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.pkg) |
+| **`Glance-macOS-Monterey.zip`** | Portable Archive (.zip) | Standalone pre-compiled application bundle. | [Download ZIP](https://github.com/cleitonnreiss/glance/releases/latest/download/Glance-macOS-Monterey.zip) |
+
+1. Download and open **`Glance-macOS-Monterey.dmg`**.
+2. Drag **Glance.app** to your **Applications** folder.
+3. Open Glance from `/Applications`.
+4. Grant the requested **Camera** and **Accessibility** permissions.
 
 
 ## Permissions
@@ -144,25 +153,24 @@ debug section should appear in the sidebar.
 ## Building from source
 
 ### Prerequisites
+- macOS 12+ (macOS Monterey, Ventura, Sonoma, or Sequoia)
+- Xcode Command Line Tools (`xcode-select --install`)
 
-- macOS 15+
-- Xcode 26+
+### Compilation & Packaging
+```bash
+# 1. Clone this repository
+git clone https://github.com/cleitonnreiss/glance.git
+cd glance
 
+# 2. Compile the application binary
+./build_app.sh
 
+# 3. Create DMG, PKG and ZIP installers
+./create_installer.sh
+```
+The compiled application is generated in `build/Glance.app` and final distribution packages in `dist/`.
 
-### Installation
-
-1. Clone repository:
-  ```bash
-   git clone https://github.com/jonnyoo/glance.git
-   cd glance
-  ```
-2. Open in Xcode:
-  ```bash
-   open glance.xcodeproj
-  ```
-3. Run the project:
-  - Click `run` or press `Cmd + R`.
+For complete architectural details and technical documentation of the Monterey port, see [MONTEREY.md](MONTEREY.md).
 
 
 
