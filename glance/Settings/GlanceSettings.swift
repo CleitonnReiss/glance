@@ -232,14 +232,20 @@ final class GlanceSettings: ObservableObject {
     /// Settings window until this is `true`. Set once, by `OnboardingController`
     /// on the true first-run flow reaching `.complete`.
     @Published var hasCompletedOnboarding: Bool {
-        didSet { defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding) }
+        didSet {
+            defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding)
+            defaults.synchronize()
+        }
     }
     /// Where to resume first-run onboarding if the app quit mid-flow; `nil`
     /// starts fresh at `.intro`. Steps depending on in-memory capture state
     /// collapse to `.preSetup` before storing, since that state doesn't
     /// survive a relaunch — see `OnboardingStep.resumeTarget`.
     @Published var onboardingResumeStep: OnboardingStep? {
-        didSet { defaults.set(onboardingResumeStep?.rawValue, forKey: Key.onboardingResumeStep) }
+        didSet {
+            defaults.set(onboardingResumeStep?.rawValue, forKey: Key.onboardingResumeStep)
+            defaults.synchronize()
+        }
     }
     /// Gates the one-time post-update notice for users who completed onboarding before the
     /// security-disclaimer step existed. Set alongside `hasCompletedOnboarding` for anyone
@@ -248,7 +254,10 @@ final class GlanceSettings: ObservableObject {
     /// acknowledged. Defaults `false`, so an upgrading 1.0 install (where this key has never
     /// been written) correctly triggers the catch-up flow once.
     @Published var hasAcknowledgedSecurityNotice: Bool {
-        didSet { defaults.set(hasAcknowledgedSecurityNotice, forKey: Key.hasAcknowledgedSecurityNotice) }
+        didSet {
+            defaults.set(hasAcknowledgedSecurityNotice, forKey: Key.hasAcknowledgedSecurityNotice)
+            defaults.synchronize()
+        }
     }
 
     private init() {

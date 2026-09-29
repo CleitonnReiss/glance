@@ -198,7 +198,36 @@ Todas as classes de estado e modelos reativos foram convertidos para a conformid
 
 ---
 
-## 14. Scripts de Compilação e Geração de Instaladores
+## 15. Correção de Crash no Encerramento do Onboarding (CoreGraphics vImageConverter)
+
+### Problema
+Ao finalizar o cadastro inicial (após o escaneamento facial e ao clicar em "Confirm" na tela de digitação de senha), o aplicativo encerrava abruptamente com erro `EXC_BAD_ACCESS (SIGSEGV)` em `CoreFoundation` / `CoreGraphics`:
+```text
+Exception Type: EXC_BAD_ACCESS (SIGSEGV)
+Thread 0 Crashed:
+0  CoreFoundation: CFRelease + 15
+1  CoreGraphics: CGvImageConverterDeallocate + 22
+2  libcache.dylib: _entry_evict + 41
+...
+19 QuartzCore: CA::Render::create_image_by_rendering
+20 QuartzCore: CA::Render::copy_image
+25 QuartzCore: CA::Transaction::commit
+```
+Ao reabrir o app, o estado de conclusão do onboarding não estava salvo, forçando o usuário a refazer todo o fluxo.
+
+### Causa Raiz
+1. **Renderização de Blur em Camadas AppKit/SwiftUI**: A transição entre os passos do assistente (`OnboardingNotchView.swift`) aplicava um modificador `.blur(radius: 12)`. No macOS 12 Monterey (especialmente em Macs Intel), rasterizar views contendo `NSViewRepresentable` / `NSSecureTextField` com desfoque durante animações forçava o `QuartzCore` a alocar e evictar conversores de espaço de cor na cache (`CGvImageConverterCache`), provocando um desalocamento ilegal (`CFRelease` em ponteiro inválido).
+2. **Persistência Assíncrona do UserDefaults**: A propriedade `hasCompletedOnboarding` gravava no `UserDefaults` sem chamada imediata a `synchronize()`. Com o crash instantâneo no loop de renderização da animação, a gravação em disco era perdida.
+
+### Solução Aplicada
+- Em `OnboardingNotchView.swift`, substituímos o modificador de transição com desfoque por `OffsetOpacity`, que combina deslocamento vertical suave e fade de opacidade nativo sem disparar conversões de rasterização `vImageConverter`.
+- Em `NotchOverlayView.swift`, removemos o `.blur(radius: 40)` no colapso do painel, mantendo fade e escala suaves.
+- Em `GlanceSettings.swift`, adicionamos `defaults.synchronize()` imediato nas propriedades `hasCompletedOnboarding`, `onboardingResumeStep` e `hasAcknowledgedSecurityNotice`.
+- Em `OnboardingController.swift`, garantimos que o foco do campo de texto seja liberado antes da transição final e que a abertura da janela de preferências ocorra após a conclusão do fechamento do entalhe.
+
+---
+
+## 16. Scripts de Compilação e Geração de Instaladores
 
 Foram incluídos scripts prontos e independentes na raiz do projeto:
 

@@ -256,12 +256,11 @@ struct NotchOverlayView: View {
                     scanContent
                 }
             }
-            // Content dissolves (blur + fade) as the panel shrinks, rather than being
+            // Content dissolves as the panel shrinks, rather than being
             // abruptly clipped by the collapsing shape. Rides the animation already
             // active on `visualIsExpanded` — no separate `.animation` needed.
-            .blur(radius: visualIsExpanded ? 0 : 40)
             .opacity(visualIsExpanded ? 1 : 0)
-            .scaleEffect(visualIsExpanded ? 1 : 0.3)
+            .scaleEffect(visualIsExpanded ? 1 : 0.8)
             .environment(\.notchPanelStyle, style)
         }
         .frame(width: currentSize.width, height: currentSize.height)
@@ -288,7 +287,6 @@ struct NotchOverlayView: View {
         // alone only fires on entering/leaving the expanded state.
         .animation(expansionAnimation(entering: true), value: onboardingController?.panelSize)
         .animation(expansionAnimation(entering: true), value: currentSize)
-        .blur(radius: panelBlur)
         // Applied after the shadow so both travel together, before `.onHover`.
         .offset(y: verticalOffset)
         .animation(.easeOut(duration: 0.18), value: isHovering)

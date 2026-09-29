@@ -46,28 +46,26 @@ struct OnboardingNotchView: View {
         let removalOffset: CGFloat = controller.navDirection == .forward ? -travel : travel
         return .asymmetric(
             insertion: .modifier(
-                active: OffsetBlurOpacity(offset: insertionOffset, blur: 12, opacity: 0),
-                identity: OffsetBlurOpacity(offset: 0, blur: 0, opacity: 1)
+                active: OffsetOpacity(offset: insertionOffset, opacity: 0),
+                identity: OffsetOpacity(offset: 0, opacity: 1)
             ),
             removal: .modifier(
-                active: OffsetBlurOpacity(offset: removalOffset, blur: 12, opacity: 0),
-                identity: OffsetBlurOpacity(offset: 0, blur: 0, opacity: 1)
+                active: OffsetOpacity(offset: removalOffset, opacity: 0),
+                identity: OffsetOpacity(offset: 0, opacity: 1)
             )
         )
     }
 }
 
-/// Backing modifier for the scroll+blur transition — offsets, blurs, and fades at once
-/// so content reads as scrolling past with a dissolve rather than a hard cut.
-private struct OffsetBlurOpacity: ViewModifier {
+/// Backing modifier for the step transition — offsets and fades smoothly
+/// without triggering CoreGraphics vImageConverter crashes on Monterey.
+private struct OffsetOpacity: ViewModifier {
     let offset: CGFloat
-    let blur: CGFloat
     let opacity: Double
 
     func body(content: Content) -> some View {
         content
             .offset(y: offset)
-            .blur(radius: blur)
             .opacity(opacity)
     }
 }

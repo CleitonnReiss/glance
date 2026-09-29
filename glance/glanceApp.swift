@@ -130,7 +130,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if GlanceSettings.shared.hasAcknowledgedSecurityNotice {
                 startUpdaterIfNeeded()
             } else {
-                // Upgraded from a version before the notice existed — show it once, standalone.
                 presentPostUpdateSecurityNotice()
             }
         } else {

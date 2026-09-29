@@ -20,6 +20,11 @@ enum AppResetter {
     /// it resets stale user data automatically so the app starts 100% fresh from scratch.
     static func verifyInstallationIntegrity() {
         let bundleURL = Bundle.main.bundleURL
+        // Only run bundle replacement check if the app is actually installed in /Applications
+        // This avoids resetting data if the user runs from Xcode/build or temporary staging directory.
+        guard bundleURL.path.hasPrefix("/Applications/") || bundleURL.path == "/Applications/Glance.app" else {
+            return
+        }
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: bundleURL.path),
               let inode = attrs[.systemFileNumber] as? UInt64,
               let creationDate = attrs[.creationDate] as? Date else {
@@ -28,12 +33,11 @@ enum AppResetter {
 
         let defaults = UserDefaults.standard
         let savedInode = defaults.object(forKey: inodeKey) as? UInt64
-        let savedBirthtime = defaults.object(forKey: birthtimeKey) as? Double
         let currentBirthtime = creationDate.timeIntervalSince1970
 
-        if let savedInode = savedInode, let savedBirthtime = savedBirthtime {
-            // If the inode or creation timestamp differs, the previous .app was deleted and replaced!
-            if savedInode != inode || abs(savedBirthtime - currentBirthtime) > 2.0 {
+        if let savedInode = savedInode {
+            // If the inode differs, the previous .app was deleted and replaced by a fresh install!
+            if savedInode != inode {
                 print("Glance: Detected new installation or reinstallation on disk (Inode \(savedInode) -> \(inode)). Resetting to factory defaults for clean onboarding.")
                 resetAllUserData(keepApplicationFile: true)
                 defaults.set(inode, forKey: inodeKey)
@@ -41,10 +45,8 @@ enum AppResetter {
                 defaults.synchronize()
                 return
             }
-        }
-
-        // Save current bundle signature if not yet recorded
-        if savedInode == nil {
+        } else {
+            // First run in /Applications - record bundle signature
             defaults.set(inode, forKey: inodeKey)
             defaults.set(currentBirthtime, forKey: birthtimeKey)
             defaults.synchronize()

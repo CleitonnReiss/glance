@@ -1033,6 +1033,8 @@ final class OnboardingController: ObservableObject {
                 try SecureCredentialManager.savePassword(bytes)
             }.value
             passwordError = nil
+            // Clear any active first responder before animating away from the password step
+            NSApp.keyWindow?.makeFirstResponder(nil)
             navDirection = .forward
             withAnimation(OnboardingMetrics.stepAnimation) { step = .complete }
             scheduleCompletionDismiss()
@@ -1055,7 +1057,9 @@ final class OnboardingController: ObservableObject {
             self.teardown()
             NotchOverlayController.shared.dismissOnboarding()
             if shouldFireCompletion {
-                onComplete?()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    onComplete?()
+                }
             }
         }
     }

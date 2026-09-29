@@ -71,7 +71,7 @@ enum SettingsMetrics {
     /// (or unfurls back out), in points.
     static let tabLabelRevealOffset: CGFloat = 10
     /// Max blur radius at the fully-collapsed end of the label reveal.
-    static let tabLabelRevealBlur: CGFloat = 4
+    static let tabLabelRevealBlur: CGFloat = 0
 
     /// Extra scroll room below a page's last row so it can clear the tab bar.
     static let pageBottomInset: CGFloat = tabBarHeight + tabBarBottomInset + 16

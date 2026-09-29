@@ -50,6 +50,10 @@ Port completo do aplicativo **Glance** (reconhecimento facial e desbloqueio inte
 - **Detecção de Reinstalação de Fábrica**: O app monitora o identificador do bundle no disco. Se você excluir o app e reinstalar uma cópia no futuro, ele detecta a nova instalação e reinicia 100% como novo, abrindo o assistente inicial de Onboarding do zero.
 - **Instalador DMG Limpo e Seguro**: A imagem de disco contém estritamente o `Glance.app` e o atalho para a pasta `Applications`.
 
+### 7. 🛡️ Estabilidade no Onboarding e Persistência Imediata de Dados
+- **Correção do Crash ao Confirmar Senha (`EXC_BAD_ACCESS` / `vImageConverter`)**: Eliminada a falha de desalocamento em `QuartzCore`/`CoreGraphics` ao concluir o assistente de configuração. A transição agora utiliza `OffsetOpacity` nativa, dispensando filtros de rasterização de desfoque conflitantes com o campo seguro de senha no macOS 12 Monterey.
+- **Sincronização Imediata no Disco**: A gravação de conclusão do Onboarding e de chave de sessão é persistida instantaneamente com `defaults.synchronize()`, garantindo que o app nunca perca o estado de configuração nem reabra pedindo onboarding novamente após a configuração inicial.
+
 ---
 
 ## 🛠️ Instruções de Instalação e Permissões
