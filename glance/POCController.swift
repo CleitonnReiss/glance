@@ -65,7 +65,7 @@ final class POCController: ObservableObject {
 
     func lockSession() {
         SecureCredentialManager.lockSession()
-        isSessionUnlocked = false
+        refreshCredentialStatus()
     }
 
     // MARK: - Setup flow

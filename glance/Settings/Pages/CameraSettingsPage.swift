@@ -18,50 +18,17 @@ struct CameraSettingsPage: View {
     private var isSessionUnlocked: Bool { pocController.isSessionUnlocked }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            lockedState
-                .opacity(isSessionUnlocked ? 0 : 1)
-                .allowsHitTesting(!isSessionUnlocked)
-                .accessibilityHidden(isSessionUnlocked)
-
-            unlockedState
-                .opacity(isSessionUnlocked ? 1 : 0)
-                .allowsHitTesting(isSessionUnlocked)
-                .accessibilityHidden(!isSessionUnlocked)
-        }
-        .animation(SettingsMetrics.stateTransitionAnimation, value: isSessionUnlocked)
-        // Gated on isSessionUnlocked so the header's refresh icon doesn't
-        // show while this page is displaying the locked prompt.
-        .preference(
-            key: HeaderTrailingActionKey.self,
-            value: isSessionUnlocked ? HeaderAction(perform: refreshDevices) : nil
-        )
-        .onAppear { pocController.refreshCredentialStatus() }
-        .onChange(of: isSessionUnlocked) { unlocked in
-            guard !unlocked else { return }
-            hidePreview()
-        }
-        .onDisappear { hidePreview() }
-        // Password/name/enrollment flows run in the notch, outside this
-        // window, so nothing else prompts a re-check once one closes.
-        .onChange(of: NotchOverlayController.shared.phase) { newPhase in
-            guard newPhase == .closed else { return }
-            pocController.refreshCredentialStatus()
-        }
-    }
-
-    // MARK: - Locked
-
-    private var lockedState: some View {
-        let lang = settings.appLanguage
-        return SettingsEmptyStateView(
-            icon: "lock.fill",
-            message: L10n.string(.sessionLocked, lang: lang),
-            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
-            isButtonEnabled: !isUnlocking,
-            caption: sessionError,
-            action: unlock
-        )
+        unlockedState
+            .preference(
+                key: HeaderTrailingActionKey.self,
+                value: HeaderAction(perform: refreshDevices)
+            )
+            .onAppear { pocController.refreshCredentialStatus() }
+            .onDisappear { hidePreview() }
+            .onChange(of: NotchOverlayController.shared.phase) { newPhase in
+                guard newPhase == .closed else { return }
+                pocController.refreshCredentialStatus()
+            }
     }
 
     // MARK: - Unlocked

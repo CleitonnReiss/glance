@@ -18,39 +18,12 @@ struct RecognitionSettingsPage: View {
     private var isSessionUnlocked: Bool { pocController.isSessionUnlocked }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            lockedState
-                .opacity(isSessionUnlocked ? 0 : 1)
-                .allowsHitTesting(!isSessionUnlocked)
-                .accessibilityHidden(isSessionUnlocked)
-
-            unlockedState
-                .opacity(isSessionUnlocked ? 1 : 0)
-                .allowsHitTesting(isSessionUnlocked)
-                .accessibilityHidden(!isSessionUnlocked)
-        }
-        .animation(SettingsMetrics.stateTransitionAnimation, value: isSessionUnlocked)
-        .onAppear { pocController.refreshCredentialStatus() }
-        // Password/name/enrollment flows run in the notch, outside this
-        // window, so nothing else prompts a re-check once one closes.
-        .onChange(of: NotchOverlayController.shared.phase) { newPhase in
-            guard newPhase == .closed else { return }
-            pocController.refreshCredentialStatus()
-        }
-    }
-
-    // MARK: - Locked
-
-    private var lockedState: some View {
-        let lang = settings.appLanguage
-        return SettingsEmptyStateView(
-            icon: "lock.fill",
-            message: L10n.string(.sessionLocked, lang: lang),
-            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
-            isButtonEnabled: !isUnlocking,
-            caption: sessionError,
-            action: unlock
-        )
+        unlockedState
+            .onAppear { pocController.refreshCredentialStatus() }
+            .onChange(of: NotchOverlayController.shared.phase) { newPhase in
+                guard newPhase == .closed else { return }
+                pocController.refreshCredentialStatus()
+            }
     }
 
     // MARK: - Unlocked

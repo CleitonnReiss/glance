@@ -91,23 +91,13 @@ enum SecureCredentialManager {
             return
         }
 
-        // Check if session has expired based on auto-lock duration (0 = never)
-        let days = UserDefaults.standard.object(forKey: "GlanceSettings.autoLockIntervalDays") as? Int ?? 0
-        if days > 0 {
-            let lastTimestamp = UserDefaults.standard.double(forKey: lastActivityTimestampKey)
-            if lastTimestamp > 0 {
-                let lastDate = Date(timeIntervalSince1970: lastTimestamp)
-                let idleLimit: TimeInterval = Double(days) * 24 * 3600
-                if Date().timeIntervalSince(lastDate) >= idleLimit {
-                    return
-                }
-            }
-        }
-
         do {
             let data = try KeychainManager.read(account: sessionKeyAccount)
-            setCachedKey(SymmetricKey(data: data))
-            print("Glance: [SecureCredentialManager] Session key restored successfully from Keychain on startup")
+            let key = SymmetricKey(data: data)
+            setCachedKey(key)
+            // Seamlessly migrate: re-save without accessControl so it never prompts for Touch ID or password
+            try? KeychainManager.save(account: sessionKeyAccount, data: data, accessControl: nil)
+            print("Glance: [SecureCredentialManager] Session key restored successfully from Keychain")
         } catch {
             print("Glance: [SecureCredentialManager] Could not auto-restore session key: \(error)")
         }
@@ -175,47 +165,41 @@ enum SecureCredentialManager {
         KeychainManager.exists(account: passwordBlobAccount)
     }
 
-    /// Prompts Touch ID and unwraps the session key, creating it Touch-ID-gated on first run. Caches only after a real gated
-    /// read-back succeeds — `SecItemAdd` alone returns success even if the user hit Cancel on the auth UI, and bridging
-    /// `LAContext.evaluatePolicy` synchronously via a semaphore deadlocks the thread pool and crashes the process.
-    /// Must succeed before `savePassword`/`readPassword`. Blocking; call from a background task.
-    nonisolated static func unlockSession(reason: String) throws {
+    /// Restores or creates the session key without gating behind Touch ID or system password prompts.
+    /// Uses standard login keychain protection (kSecAttrAccessibleWhenUnlockedThisDeviceOnly).
+    nonisolated static func unlockSession(reason: String = "") throws {
         if cachedKey() != nil { return }
 
-        // User is actively unlocking the session; clear any manual lock state
         UserDefaults.standard.set(false, forKey: manuallyLockedKey)
         UserDefaults.standard.synchronize()
 
-        // The existence check, not the read, decides whether a key gets created (load-bearing): a cancelled Touch ID prompt on
-        // a user-presence item reports `errSecItemNotFound`, indistinguishable from no key — deciding on the read's error would
-        // mint a fresh key (destroying the one that decrypts existing data) on every mis-tap.
         if KeychainManager.exists(account: sessionKeyAccount) {
-            let context = LAContext()
-            context.localizedReason = reason
-            let data = try KeychainManager.read(account: sessionKeyAccount, context: context)
-            setCachedKey(SymmetricKey(data: data))
+            let data: Data
+            if let silentData = try? KeychainManager.read(account: sessionKeyAccount) {
+                data = silentData
+            } else {
+                let context = LAContext()
+                context.localizedReason = reason.isEmpty ? "Glance" : reason
+                data = try KeychainManager.read(account: sessionKeyAccount, context: context)
+            }
+            let key = SymmetricKey(data: data)
+            setCachedKey(key)
+            // Re-save without accessControl to remove any legacy prompt
+            try? KeychainManager.save(account: sessionKeyAccount, data: data, accessControl: nil)
             return
         }
 
-        // No key at all, but minting one is still destructive if data is already encrypted under a previous key (e.g. a
-        // re-signed dev build) — refuse rather than silently render it unreadable forever.
         guard !hasSessionEncryptedData else {
             throw SecureCredentialError.sessionKeyUnavailable
         }
 
         let key = SymmetricKey(size: .bits256)
-        let access = try KeychainManager.makeUserPresenceAccessControl()
         try KeychainManager.save(
             account: sessionKeyAccount,
             data: key.withUnsafeBytes { Data($0) },
-            accessControl: access
+            accessControl: nil
         )
-
-        // Read back through the gated path rather than trusting the write — only a real read proves authentication happened.
-        let readBackContext = LAContext()
-        readBackContext.localizedReason = reason
-        let data = try KeychainManager.read(account: sessionKeyAccount, context: readBackContext)
-        setCachedKey(SymmetricKey(data: data))
+        setCachedKey(key)
     }
 
     /// Checked without needing the key itself, so this stays answerable precisely when the key can't be read.
@@ -223,11 +207,9 @@ enum SecureCredentialManager {
         KeychainManager.exists(account: passwordBlobAccount) || SecureFaceStore.exists
     }
 
-    /// Clears the cached session key and records that the user manually locked the vault.
+    /// Locking is disabled as requested — vault stays continuously unlocked.
     nonisolated static func lockSession() {
-        UserDefaults.standard.set(true, forKey: manuallyLockedKey)
-        UserDefaults.standard.synchronize()
-        setCachedKey(nil)
+        // Vault is permanently unlocked; no-op.
     }
 
     /// Encrypts and stores `passwordBytes`. Requires an unlocked session —

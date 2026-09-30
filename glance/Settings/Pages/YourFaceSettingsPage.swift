@@ -22,20 +22,16 @@ struct YourFaceSettingsPage: View {
     /// failure, so the control snaps back on its own — this explains why.
     @State private var writeError: String?
 
-    /// Locked takes priority over enrollment status: `FaceIdentity` data is
-    /// encrypted under the session key, so whether anyone is enrolled is
-    /// unknown until the session is unlocked.
     private enum PageStateKind: Equatable {
-        case locked
         case unreadable
         case notEnrolled
         case enrolled
     }
 
     private var stateKind: PageStateKind {
-        if store.isLocked { return .locked }
-        // Ahead of `.notEnrolled` — a failed decrypt looks like an empty
-        // store, and offering "Set up Face Unlock" there would destroy the data.
+        if store.isLocked {
+            store.reloadIfUnlocked()
+        }
         if store.loadFailure != nil { return .unreadable }
         return store.identities.isEmpty ? .notEnrolled : .enrolled
     }
@@ -49,11 +45,6 @@ struct YourFaceSettingsPage: View {
     var body: some View {
         let lang = settings.appLanguage
         ZStack(alignment: .top) {
-            lockedState(lang: lang)
-                .opacity(stateKind == .locked ? 1 : 0)
-                .allowsHitTesting(stateKind == .locked)
-                .accessibilityHidden(stateKind != .locked)
-
             unreadableState(lang: lang)
                 .opacity(stateKind == .unreadable ? 1 : 0)
                 .allowsHitTesting(stateKind == .unreadable)
@@ -91,19 +82,6 @@ struct YourFaceSettingsPage: View {
         } message: { identity in
             Text(L10n.string(.deleteFaceMessage, lang: lang, identity.name))
         }
-    }
-
-    // MARK: - Locked
-
-    private func lockedState(lang: AppLanguage) -> some View {
-        SettingsEmptyStateView(
-            icon: "lock.fill",
-            message: L10n.string(.sessionLocked, lang: lang),
-            buttonTitle: isUnlocking ? L10n.string(.authenticatingBtn, lang: lang) : L10n.string(.unlockSessionBtn, lang: lang),
-            isButtonEnabled: !isUnlocking,
-            caption: sessionError,
-            action: unlock
-        )
     }
 
     // MARK: - Unreadable

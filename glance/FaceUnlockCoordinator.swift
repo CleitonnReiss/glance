@@ -71,11 +71,38 @@ final class FaceUnlockCoordinator: ObservableObject {
 
     /// Re-subscribes on every change — `withObservationTracking` only fires once per registration.
     private func observeLockAndWakeEvents() {
-        lockMonitor.onEvent = { [weak self] _ in
+        lockMonitor.onEvent = { [weak self] event in
             Task { @MainActor [weak self] in
-                // Brief settle delay: CGSession's reported state can lag the true state right after wake.
+                guard let self else { return }
+                if event == .willSleep {
+                    self.hasArmedForCurrentLock = false
+                    self.lastArmedAt = nil
+                    self.disarmOverlay()
+                    return
+                }
+
+                if event == .wake {
+                    // Waking up from sleep or display sleep: always reset arm state and debounce
+                    self.hasArmedForCurrentLock = false
+                    self.lastArmedAt = nil
+                    
+                    // Settle delay, and schedule retry in case CGSession lock state or camera hardware lags
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    self.evaluateTrigger()
+                    
+                    // If not armed on first check due to wake lag, retry after 500ms
+                    if !self.hasArmedForCurrentLock {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        if !self.hasArmedForCurrentLock && LockMonitor.isScreenActuallyLocked() {
+                            self.evaluateTrigger()
+                        }
+                    }
+                    return
+                }
+
+                // Brief settle delay: CGSession's reported state can lag the true state right after lock.
                 try? await Task.sleep(nanoseconds: 300_000_000)
-                self?.evaluateTrigger()
+                self.evaluateTrigger()
             }
         }
     }
@@ -90,8 +117,7 @@ final class FaceUnlockCoordinator: ObservableObject {
         guard !lockMonitor.isSleeping else { return }
 
         // `.wake` (sleep, display sleep, or screensaver stopping) is an explicit "let me back in," so clear the one-shot guard.
-        // `isWithinRecentArmBurst` keeps the several wake signals from one lid-open from each re-arming and fighting over the camera.
-        if lockMonitor.lastEvent == .wake, !isWithinRecentArmBurst {
+        if lockMonitor.lastEvent == .wake {
             hasArmedForCurrentLock = false
         }
 
